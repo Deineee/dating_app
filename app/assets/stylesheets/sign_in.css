@@ -1,0 +1,44 @@
+form.sign-in-form {
+  max-width: 400px;
+  margin: 1.5rem auto;
+  padding: 2rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff7f0;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+  font-family: Arial, sans-serif;
+}
+
+form.sign-in-form input {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+form.sign-in-form button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+form.sign-in-form button:hover {
+  background-color: #27ae60;
+}
+
+form.sign-in-form p.error {
+  color: #d93025;
+  margin-top: 0.5rem;
+  font-weight: 600;
+}

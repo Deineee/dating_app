@@ -1,10 +1,12 @@
 <template>
   <div>
     <h1>Dating App</h1>
-    <p>Rails + Vue + Apollo is working!</p>
+    <SignUp />
+    <SignIn />
   </div>
 </template>
 
 <script setup>
-// future Apollo queries go here
+import SignUp from '../components/SignUp.vue'
+import SignIn from '../components/SignIn.vue'
 </script>

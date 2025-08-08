@@ -68,3 +68,4 @@ gem "graphql", "~> 2.5"
 gem "graphiql-rails", group: :development
 gem "devise" # For authentication
 gem "active_storage_validations" # For photos
+gem 'jwt'
