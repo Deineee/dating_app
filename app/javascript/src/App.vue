@@ -1,12 +1,21 @@
 <template>
   <div>
-    <h1>Dating App</h1>
-    <SignUp />
-    <SignIn />
+    <Header />
+    <main class="main-content">
+      <router-view />
+    </main>
+    <Footer />
   </div>
 </template>
 
 <script setup>
-import SignUp from '../components/SignUp.vue'
-import SignIn from '../components/SignIn.vue'
+import Header from '../components/shared/Header.vue'
+import Footer from '../components/shared/Footer.vue'
 </script>
+
+<style scoped>
+.main-content {
+  padding: 2rem;
+  min-height: 70vh;
+}
+</style>

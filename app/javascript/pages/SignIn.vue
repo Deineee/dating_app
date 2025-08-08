@@ -11,6 +11,7 @@
 </template>
 
 <script setup>
+import '../stylesheets/sign_in.css'
 import { ref } from 'vue'
 import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
