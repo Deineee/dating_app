@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "vite": "^5.4.19",
+    "vite-plugin-ruby": "^5.1.1"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.13.9",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/apollo-composable": "^4.2.2",
+    "graphql": "^16.11.0",
+    "vue": "^3.5.18"
+  }
+}
