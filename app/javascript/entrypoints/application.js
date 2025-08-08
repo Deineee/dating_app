@@ -4,7 +4,7 @@ import { ApolloClient, InMemoryCache } from '@apollo/client/core'
 import { DefaultApolloClient } from '@vue/apollo-composable'
 
 const apolloClient = new ApolloClient({
-  uri: '/graphql',
+  uri: 'http://localhost:3000/graphql',
   cache: new InMemoryCache(),
 })
 
