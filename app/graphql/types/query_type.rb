@@ -3,6 +3,7 @@
 module Types
   class QueryType < Types::BaseObject
     field :current_user, Types::UserType, null: true
+    field :matching_profiles, [Types::UserType], null: false
     field :node, Types::NodeType, null: true, description: "Fetches an object given its ID." do
       argument :id, ID, required: true, description: "ID of the object."
     end
@@ -25,5 +26,16 @@ module Types
     def current_user
       context[:current_user]
     end
+
+    def matching_profiles
+      user = context[:current_user]
+      Rails.logger.info("Current user: #{user.inspect}")
+      return [] unless user
+
+      User.where("LOWER(gender) = ?", user.gender_interest.downcase)
+          .where.not(id: user.id) # exclude current user
+          .limit(20) # limit results for performance
+    end
+
   end
 end

@@ -24,17 +24,20 @@ class GraphqlController < ApplicationController
   private
 
   def current_user_from_token
-    auth_header = request.headers['Authorization']
-    return nil unless auth_header&.start_with?('Bearer ')
+  auth_header = request.headers['Authorization']
+  Rails.logger.info("Auth header: #{auth_header.inspect}")
+  return nil unless auth_header&.start_with?('Bearer ')
 
-    token = auth_header.split(' ').last
-    begin
-      payload = JWT.decode(token, Rails.application.secret_key_base)[0]
-      User.find_by(id: payload['id'])
-    rescue JWT::DecodeError
-      nil
-    end
+  token = auth_header.split(' ').last
+  begin
+    payload = JWT.decode(token, Rails.application.secret_key_base)[0]
+    Rails.logger.info("Decoded JWT payload: #{payload.inspect}")
+    User.find_by(id: payload['id'])
+  rescue JWT::DecodeError => e
+    Rails.logger.warn("JWT decode error: #{e.message}")
+    nil
   end
+end
 
   # Handle variables in form data, JSON body, or a blank value
   def prepare_variables(variables_param)

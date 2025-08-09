@@ -28,6 +28,7 @@ const SIGN_IN_MUTATION = gql`
         id
         email
       }
+      token
       errors
     }
   }
@@ -52,7 +53,7 @@ const onSubmit = async () => {
     if (data.signIn.errors.length) {
       errors.value = data.signIn.errors
     } else {
-      login(data.signIn.token)  // <-- update reactive auth state here
+      login(data.signIn.token)  
       router.push('/swipe')
     }
   } catch (e) {

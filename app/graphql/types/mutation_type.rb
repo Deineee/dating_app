@@ -5,5 +5,7 @@ module Types
     field :sign_up, mutation: Mutations::SignUp
     field :sign_in, mutation: Mutations::SignIn
     field :sign_out, mutation: Mutations::SignOut
+    field :like_user, mutation: Mutations::LikeUser
+    field :dislike_user, mutation: Mutations::DislikeUser
   end
 end

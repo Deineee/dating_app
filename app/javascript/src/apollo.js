@@ -3,7 +3,7 @@ import { setContext } from '@apollo/client/link/context'
 import { provideApolloClient } from '@vue/apollo-composable'
 
 const httpLink = createHttpLink({
-  uri: 'http://localhost:3000/graphql',
+  uri: 'http://localhost:3100/graphql',
 })
 
 // Add both CSRF token and JWT token to headers

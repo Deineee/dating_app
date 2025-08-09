@@ -34,53 +34,69 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useQuery, useMutation } from '@vue/apollo-composable'
+import gql from 'graphql-tag'
 
-// Mock user profiles, replace with API call or GraphQL query
-const profiles = ref([
-  {
-    id: 1,
-    primaryPhoto: 'https://randomuser.me/api/portraits/women/65.jpg',
-    photos: [
-      'https://randomuser.me/api/portraits/women/65.jpg',
-      'https://randomuser.me/api/portraits/women/66.jpg',
-      'https://randomuser.me/api/portraits/women/67.jpg',
-    ],
-    firstName: 'Jane',
-    lastName: 'Doe',
-    country: 'USA',
-    state: 'California',
-    city: 'Los Angeles',
-    bio: 'Love hiking, coffee, and good company.'
-  },
-  {
-    id: 2,
-    primaryPhoto: 'https://randomuser.me/api/portraits/men/22.jpg',
-    photos: [
-      'https://randomuser.me/api/portraits/men/22.jpg',
-      'https://randomuser.me/api/portraits/men/23.jpg',
-    ],
-    firstName: 'John',
-    lastName: 'Smith',
-    country: 'USA',
-    state: 'New York',
-    city: 'New York City',
-    bio: 'Enjoys jazz music and coding.'
+// Declare queries and mutations first!
+const MATCHING_PROFILES_QUERY = gql`
+  query {
+    matchingProfiles {
+      id
+      firstName
+      lastName
+      country
+      state
+      city
+      bio
+      photos
+      primaryPhoto
+    }
   }
-])
+`
 
+const LIKE_USER_MUTATION = gql`
+  mutation LikeUser($userId: ID!) {
+    likeUser(userId: $userId) {
+      success
+    }
+  }
+`
+
+const DISLIKE_USER_MUTATION = gql`
+  mutation DislikeUser($userId: ID!) {
+    dislikeUser(userId: $userId) {
+      success
+    }
+  }
+`
+
+// Now use them
+const { result, loading, error } = useQuery(MATCHING_PROFILES_QUERY)
+const { mutate: likeUser } = useMutation(LIKE_USER_MUTATION)
+const { mutate: dislikeUser } = useMutation(DISLIKE_USER_MUTATION)
+
+const profiles = ref([])
 const currentIndex = ref(0)
+
+watch(result, (newResult) => {
+  if (newResult && newResult.matchingProfiles) {
+    profiles.value = newResult.matchingProfiles
+    currentIndex.value = 0
+  }
+})
 
 const currentProfile = computed(() => profiles.value[currentIndex.value] || null)
 
-function likeProfile() {
-  alert(`You liked ${currentProfile.value.firstName}`)
+async function likeProfile() {
+  if (!currentProfile.value) return
+  await likeUser({ userId: currentProfile.value.id })
   nextProfile()
 }
 
-function dislikeProfile() {
-  alert(`You disliked ${currentProfile.value.firstName}`)
+async function dislikeProfile() {
+  if (!currentProfile.value) return
+  await dislikeUser({ userId: currentProfile.value.id })
   nextProfile()
 }
 
@@ -88,10 +104,11 @@ function nextProfile() {
   if (currentIndex.value < profiles.value.length - 1) {
     currentIndex.value++
   } else {
-    currentIndex.value = null // No more profiles
+    currentIndex.value = null
   }
 }
 </script>
+
 
 <style>
 .swipe-page {

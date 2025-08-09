@@ -1,9 +1,9 @@
-// javascript/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../pages/Home.vue'
 import SignIn from '../pages/SignIn.vue'
 import SignUp from '../pages/SignUp.vue'
 import SwipePage from '../pages/SwipePage.vue'
+import { useAuth } from './composables/useAuth' 
 
 const routes = [
   { path: '/', component: Home },
@@ -17,11 +17,12 @@ const router = createRouter({
   routes,
 })
 
-// Navigation guard to protect /swipe
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('currentUser')
+const { isLoggedIn } = useAuth()
 
-  if (to.path === '/swipe' && !isAuthenticated) {
+router.beforeEach((to, from, next) => {
+  const authenticated = isLoggedIn()  // check localStorage token
+
+  if (to.path === '/swipe' && !authenticated) {
     next('/signin')
   } else {
     next()

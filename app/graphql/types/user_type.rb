@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+include Rails.application.routes.url_helpers
 
 module Types
   class UserType < Types::BaseObject
@@ -23,8 +24,17 @@ module Types
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     field :primary_photo, String, null: true
+    field :photos, [String], null: false, description: "Array of photo URLs"
+
+    def photos
+      # Map attached photos to their URLs
+      object.photos.map do |photo|
+        Rails.application.routes.url_helpers.url_for(photo)
+      end
+    end
 
     def primary_photo
+      # Return the first photo URL if exists
       object.photos.attached? ? Rails.application.routes.url_helpers.url_for(object.photos.first) : nil
     end
   end
