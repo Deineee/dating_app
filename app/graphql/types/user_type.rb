@@ -22,6 +22,10 @@ module Types
     field :bio, String
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
-    field :primary_photo, String
+    field :primary_photo, String, null: true
+
+    def primary_photo
+      object.photos.attached? ? Rails.application.routes.url_helpers.url_for(object.photos.first) : nil
+    end
   end
 end

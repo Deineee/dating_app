@@ -69,3 +69,7 @@ gem "graphiql-rails", group: :development
 gem "devise" # For authentication
 gem "active_storage_validations" # For photos
 gem 'jwt'
+gem "cloudinary"
+gem "activestorage-cloudinary-service"
+gem 'dotenv-rails', groups: [:development, :test]
+gem "ruby-vips", "~> 2.2"

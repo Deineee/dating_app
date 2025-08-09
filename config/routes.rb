@@ -17,4 +17,9 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   root "home#index"
+
+  # Catch-all for Vue Router (except for asset files)
+  get '*path', to: 'home#index', constraints: ->(req) do
+    !req.xhr? && req.format.html?
+  end
 end
