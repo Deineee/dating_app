@@ -42,3 +42,11 @@ form.sign-up-form p.error {
   margin-top: 0.5rem;
   font-weight: 600;
 }
+
+.title{
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-weight: bold;
+}

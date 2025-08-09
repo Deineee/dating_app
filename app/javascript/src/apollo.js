@@ -4,23 +4,26 @@ import { provideApolloClient } from '@vue/apollo-composable'
 
 const httpLink = createHttpLink({
   uri: 'http://localhost:3000/graphql',
-  credentials: 'include', // important for Devise cookie session
 })
 
-const csrfLink = setContext((_, { headers }) => {
-  const token =
+// Add both CSRF token and JWT token to headers
+const authLink = setContext((_, { headers }) => {
+  const csrfToken =
     document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-    getCookie('CSRF-TOKEN') || '' // fallback if meta missing
+    getCookie('CSRF-TOKEN') || ''
+
+  const token = localStorage.getItem('auth_token') || ''
 
   return {
     headers: {
       ...headers,
-      'X-CSRF-Token': token,
+      'X-CSRF-Token': csrfToken,
+      // Add Authorization header if token exists
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   }
 })
 
-// helper to read CSRF cookie if needed
 function getCookie(name) {
   const value = `; ${document.cookie}`
   const parts = value.split(`; ${name}=`)
@@ -30,7 +33,7 @@ function getCookie(name) {
 const cache = new InMemoryCache()
 
 export const apolloClient = new ApolloClient({
-  link: csrfLink.concat(httpLink),
+  link: authLink.concat(httpLink),
   cache,
 })
 

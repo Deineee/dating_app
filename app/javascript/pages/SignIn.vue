@@ -15,7 +15,11 @@ import '../stylesheets/sign_in.css'
 import { ref } from 'vue'
 import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
+import { useRouter } from 'vue-router'
+import { useAuth } from '../src/composables/useAuth'
 
+const { login } = useAuth()
+const router = useRouter() 
 
 const SIGN_IN_MUTATION = gql`
   mutation SignIn($input: SignInInput!) {
@@ -48,8 +52,8 @@ const onSubmit = async () => {
     if (data.signIn.errors.length) {
       errors.value = data.signIn.errors
     } else {
-      alert(`Signed in as ${data.signIn.user.email}`)
-      // Store user info, maybe redirect, or set auth state here
+      login(data.signIn.token)  // <-- update reactive auth state here
+      router.push('/swipe')
     }
   } catch (e) {
     errors.value = [e.message]

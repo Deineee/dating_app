@@ -1,0 +1,167 @@
+<template>
+  <div class="swipe-page">
+    <div v-if="currentProfile" class="profile-card">
+      <div class="primary-photo">
+        <img :src="currentProfile.primaryPhoto" alt="Primary Photo" />
+      </div>
+      
+      <div class="photo-gallery">
+        <img 
+          v-for="(photo, index) in currentProfile.photos" 
+          :key="index" 
+          :src="photo" 
+          alt="Gallery Photo"
+          class="gallery-photo"
+        />
+      </div>
+
+      <div class="profile-info">
+        <h2>{{ currentProfile.firstName }} {{ currentProfile.lastName }}</h2>
+        <p class="location">{{ currentProfile.country }}, {{ currentProfile.state }}, {{ currentProfile.city }}</p>
+        <p class="bio">{{ currentProfile.bio }}</p>
+      </div>
+
+      <div class="actions">
+        <button @click="dislikeProfile">Dislike</button>
+        <button @click="likeProfile">Like</button>
+      </div>
+    </div>
+
+    <div v-else class="no-profiles">
+      <p>No more profiles to show.</p>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { computed } from 'vue'
+
+// Mock user profiles, replace with API call or GraphQL query
+const profiles = ref([
+  {
+    id: 1,
+    primaryPhoto: 'https://randomuser.me/api/portraits/women/65.jpg',
+    photos: [
+      'https://randomuser.me/api/portraits/women/65.jpg',
+      'https://randomuser.me/api/portraits/women/66.jpg',
+      'https://randomuser.me/api/portraits/women/67.jpg',
+    ],
+    firstName: 'Jane',
+    lastName: 'Doe',
+    country: 'USA',
+    state: 'California',
+    city: 'Los Angeles',
+    bio: 'Love hiking, coffee, and good company.'
+  },
+  {
+    id: 2,
+    primaryPhoto: 'https://randomuser.me/api/portraits/men/22.jpg',
+    photos: [
+      'https://randomuser.me/api/portraits/men/22.jpg',
+      'https://randomuser.me/api/portraits/men/23.jpg',
+    ],
+    firstName: 'John',
+    lastName: 'Smith',
+    country: 'USA',
+    state: 'New York',
+    city: 'New York City',
+    bio: 'Enjoys jazz music and coding.'
+  }
+])
+
+const currentIndex = ref(0)
+
+const currentProfile = computed(() => profiles.value[currentIndex.value] || null)
+
+function likeProfile() {
+  alert(`You liked ${currentProfile.value.firstName}`)
+  nextProfile()
+}
+
+function dislikeProfile() {
+  alert(`You disliked ${currentProfile.value.firstName}`)
+  nextProfile()
+}
+
+function nextProfile() {
+  if (currentIndex.value < profiles.value.length - 1) {
+    currentIndex.value++
+  } else {
+    currentIndex.value = null // No more profiles
+  }
+}
+</script>
+
+<style>
+.swipe-page {
+  max-width: 400px;
+  margin: 1rem auto;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  font-family: Arial, sans-serif;
+}
+
+.primary-photo img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.photo-gallery {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.gallery-photo {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.profile-info {
+  margin-top: 1rem;
+}
+
+.location {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.bio {
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-around;
+}
+
+.actions button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 1px solid #888;
+  background: #f0f0f0;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.actions button:hover {
+  background: #ddd;
+}
+
+.no-profiles {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #999;
+  margin-top: 2rem;
+}
+</style>

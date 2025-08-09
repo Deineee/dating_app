@@ -1,5 +1,6 @@
 <template>
   <form class="sign-up-form" @submit.prevent="onSubmit">
+    <div class="title">Create Account</div>
     <input v-model="firstName" placeholder="First Name*" required />
     <input v-model="lastName" placeholder="Last Name*" required />
     <input v-model="mobileNumber" type="tel" placeholder="Mobile Number*" required />
@@ -48,6 +49,11 @@ import { ref } from 'vue'
 import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import '../stylesheets/sign_up.css'
+import { useRouter } from 'vue-router'
+import { useAuth } from '../src/composables/useAuth'
+
+const { login } = useAuth()
+const router = useRouter() 
 
 const SIGN_UP_MUTATION = gql`
   mutation SignUp($input: SignUpInput!) {
@@ -129,14 +135,17 @@ const onSubmit = async () => {
         city: city.value,
         school: school.value,
         bio: bio.value,
-        photos: base64Photos, // now array of strings
+        photos: base64Photos,
       }
     })
 
     if (data.signUp.errors.length) {
       errors.value = data.signUp.errors
     } else {
-      alert(`Signed up as ${data.signUp.user.email}`)
+
+       login(data.signIn.token) 
+      // Redirect to SwipePage
+      router.push('/swipe')
     }
   } catch (e) {
     errors.value = [e.message]
