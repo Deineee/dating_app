@@ -89,4 +89,9 @@ Rails.application.configure do
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 
   config.active_storage.service = :cloudinary
+
+  # Replace 'www.myproductiondomain.com' with your real domain.
+  Rails.application.routes.default_url_options[:host] = 'www.myproductiondomain.com'
+  config.action_mailer.default_url_options = { host: 'www.myproductiondomain.com' }
+  Rails.application.routes.default_url_options[:protocol] = 'https'
 end
