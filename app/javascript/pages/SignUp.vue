@@ -47,6 +47,7 @@
 import { ref } from 'vue'
 import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
+import '../stylesheets/sign_up.css'
 
 const SIGN_UP_MUTATION = gql`
   mutation SignUp($input: SignUpInput!) {

@@ -73,4 +73,3 @@ gem "cloudinary"
 gem "activestorage-cloudinary-service"
 gem 'dotenv-rails', groups: [:development, :test]
 gem "ruby-vips", "~> 2.2"
-gem "tailwindcss-rails"
