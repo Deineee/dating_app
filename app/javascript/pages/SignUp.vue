@@ -63,6 +63,14 @@ const SIGN_UP_MUTATION = gql`
     }
   }
 `
+const SIGN_IN_MUTATION = gql`
+  mutation SignIn($input: SignInInput!) {
+    signIn(input: $input) {
+      token
+      errors
+    }
+  }
+`
 
 const firstName = ref('')
 const lastName = ref('')
@@ -83,6 +91,7 @@ const photos = ref([])
 const errors = ref([])
 
 const { mutate: signUp } = useMutation(SIGN_UP_MUTATION)
+const { mutate: signIn } = useMutation(SIGN_IN_MUTATION)
 
 const onFileChange = (e) => {
   const files = Array.from(e.target.files)
@@ -115,10 +124,10 @@ const onSubmit = async () => {
   }
 
   try {
-    // Convert photos to base64 strings
     const base64Photos = await Promise.all(photos.value.map(fileToBase64))
 
-    const { data } = await signUp({
+    // 1. Call signUp mutation first
+    const { data: signUpData } = await signUp({
       input: {
         firstName: firstName.value,
         lastName: lastName.value,
@@ -139,14 +148,27 @@ const onSubmit = async () => {
       }
     })
 
-    if (data.signUp.errors.length) {
-      errors.value = data.signUp.errors
-    } else {
-
-       login(data.signIn.token) 
-      // Redirect to SwipePage
-      router.push('/swipe')
+    if (signUpData.signUp.errors.length) {
+      errors.value = signUpData.signUp.errors
+      return
     }
+
+    // 2. Call signIn mutation to get token
+    const { data: signInData } = await signIn({
+      input: {
+        email: email.value,
+        password: password.value
+      }
+    })
+    
+    if (signInData.signIn.errors.length) {
+      errors.value = signInData.signIn.errors
+      return
+    }
+
+    // 3. Login and redirect
+    login(signInData.signIn.token)
+    router.push('/swipe')
   } catch (e) {
     errors.value = [e.message]
   }
