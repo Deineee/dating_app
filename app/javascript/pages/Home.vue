@@ -4,7 +4,3 @@
     <p>Find your perfect match by signing up or signing in.</p>
   </div>
 </template>
-
-<script setup>
-import '../stylesheets/home.css'
-</script>

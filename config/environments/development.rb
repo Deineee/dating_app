@@ -71,6 +71,7 @@ Rails.application.configure do
   # config.generators.apply_rubocop_autocorrect_after_generate!
 
   config.active_storage.service = :cloudinary
+
   Rails.application.routes.default_url_options[:host] = 'localhost:3000'
   config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
 end
