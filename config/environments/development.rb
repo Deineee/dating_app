@@ -72,6 +72,6 @@ Rails.application.configure do
 
   config.active_storage.service = :cloudinary
 
-  Rails.application.routes.default_url_options[:host] = 'localhost:3000'
-  config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
+  Rails.application.routes.default_url_options[:host] = 'localhost:3100'
+  config.action_mailer.default_url_options = { host: 'localhost', port: 3100 }
 end

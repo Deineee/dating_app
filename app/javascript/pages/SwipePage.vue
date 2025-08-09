@@ -56,16 +56,16 @@ const MATCHING_PROFILES_QUERY = gql`
 `
 
 const LIKE_USER_MUTATION = gql`
-  mutation LikeUser($userId: ID!) {
-    likeUser(userId: $userId) {
+  mutation LikeUser($input: LikeUserInput!) {
+    likeUser(input: $input) {
       success
     }
   }
 `
 
 const DISLIKE_USER_MUTATION = gql`
-  mutation DislikeUser($userId: ID!) {
-    dislikeUser(userId: $userId) {
+  mutation DislikeUser($input: DislikeUserInput!) {
+    dislikeUser(input: $input) {
       success
     }
   }
@@ -90,13 +90,13 @@ const currentProfile = computed(() => profiles.value[currentIndex.value] || null
 
 async function likeProfile() {
   if (!currentProfile.value) return
-  await likeUser({ userId: currentProfile.value.id })
+  await likeUser({ input: { userId: currentProfile.value.id } })
   nextProfile()
 }
 
 async function dislikeProfile() {
   if (!currentProfile.value) return
-  await dislikeUser({ userId: currentProfile.value.id })
+  await dislikeUser({ input: { userId: currentProfile.value.id } })
   nextProfile()
 }
 
