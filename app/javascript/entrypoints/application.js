@@ -3,6 +3,7 @@ import App from '../src/App.vue'
 import { ApolloClient, InMemoryCache } from '@apollo/client/core'
 import { DefaultApolloClient } from '@vue/apollo-composable'
 import router from '../src/router'
+import '../stylesheets/global.css'
 
 const apolloClient = new ApolloClient({
   uri: '/graphql',
