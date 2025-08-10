@@ -5,14 +5,13 @@ import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import { useAuth } from '../../src/composables/useAuth'
 import '../../stylesheets/header.css'
-import { apolloClient } from '../../src/apollo' //
-
+import { apolloClient } from '../../src/apollo'
 
 const router = useRouter()
 const route = useRoute()
 const { isAuthenticated: authRef, logout } = useAuth()
 const isAuthenticated = computed(() => authRef.value)
-const authRoutes = ['Swipe', 'Matches']
+const authRoutes = ['Swipe', 'Matches', 'Messages', 'Conversation'] // added message routes
 
 const SIGN_OUT_MUTATION = gql`
   mutation SignOut($input: SignOutInput!) {
@@ -28,19 +27,16 @@ const handleLogout = async () => {
   } catch (error) {
     console.error('Logout failed:', error)
   } finally {
-    // clear token + local data
     localStorage.removeItem('auth_token')
     localStorage.removeItem('currentUser')
     logout()
 
-    // clear Apollo cache (do NOT resetStore here)
     try {
       await apolloClient.clearStore()
     } catch (err) {
       console.warn('Failed to clear Apollo store', err)
     }
 
-    // redirect to landing
     router.push({ name: 'Landing' })
   }
 }
@@ -57,11 +53,14 @@ const showHomeLink = computed(() => {
         <li v-if="!isAuthenticated"><router-link to="/signin">Sign In</router-link></li>
         <li v-if="!isAuthenticated"><router-link to="/signup">Sign Up</router-link></li>
 
-        <!-- Home link visible only when on the Swipe route AND authenticated -->
+        <!-- Home link visible only when on authenticated routes -->
         <li v-if="showHomeLink"><router-link :to="{ name: 'Swipe' }">Home</router-link></li>
 
-        <!-- Matches link for authenticated users -->
+        <!-- Matches link -->
         <li v-if="isAuthenticated"><router-link to="/matches">Matches</router-link></li>
+
+        <!-- Inbox link -->
+        <li v-if="isAuthenticated"><router-link to="/messages">Inbox</router-link></li>
 
         <!-- Logout button -->
         <li v-if="isAuthenticated">

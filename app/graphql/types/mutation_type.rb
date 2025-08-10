@@ -7,5 +7,6 @@ module Types
     field :sign_out, mutation: Mutations::SignOut
     field :like_user, mutation: Mutations::LikeUser
     field :dislike_user, mutation: Mutations::DislikeUser
+    field :send_message, mutation: Mutations::SendMessage
   end
 end

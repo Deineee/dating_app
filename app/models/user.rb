@@ -27,4 +27,14 @@ class User < ApplicationRecord
   def generate_jwt
     JWT.encode({ id: id, exp: 60.days.from_now.to_i }, Rails.application.secret_key_base)
   end
+
+  def matched_user_ids
+    liked_ids = Like.where(liker_id: id).pluck(:liked_id)
+    return [] if liked_ids.empty?
+    Like.where(liker_id: liked_ids, liked_id: id).pluck(:liker_id)
+  end
+
+  def matched_with?(other_user_id)
+    matched_user_ids.include?(other_user_id)
+  end
 end

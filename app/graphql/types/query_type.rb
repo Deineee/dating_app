@@ -5,6 +5,8 @@ module Types
     field :current_user, Types::UserType, null: true
     field :matching_profiles, [Types::UserType], null: false
     field :matches, resolver: Resolvers::MatchesResolver
+    field :inbox, resolver: Resolvers::InboxResolver
+    field :conversation, resolver: Resolvers::ConversationResolver
     field :node, Types::NodeType, null: true, description: "Fetches an object given its ID." do
       argument :id, ID, required: true, description: "ID of the object."
     end

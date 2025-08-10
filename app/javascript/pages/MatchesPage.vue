@@ -12,7 +12,12 @@
       <li v-for="m in matches" :key="m.id" class="match-card">
         <img :src="m.primaryPhoto" alt="Primary photo" class="match-photo" />
         <div class="match-info">
-          <div class="name">{{ m.firstName }} {{ m.lastName }}</div>
+            <div class="name">{{ m.firstName }} {{ m.lastName }}</div>
+        </div>
+
+        <!-- Message button -->
+        <div class="actions">
+            <button @click="openConversation(m.id)" class="msg-btn">Message</button>
         </div>
       </li>
     </ul>
@@ -23,6 +28,12 @@
 import { useQuery } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
+function openConversation(userId) {
+  router.push({ name: 'Conversation', params: { userId } })
+}
 
 const MATCHES_QUERY = gql`
   query Matches {
@@ -84,6 +95,8 @@ if (error.value) {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem;
+  justify-content: space-between;
+  padding-right: 12px;
 }
 
 .match-photo {
@@ -98,4 +111,17 @@ if (error.value) {
   font-weight: 700;
   font-size: 1rem;
 }
+
+.actions { display:flex; align-items:center; gap:8px; }
+
+.msg-btn {
+  background: #2d8cff;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.msg-btn:hover { background: #1b6fe6; }
+
 </style>

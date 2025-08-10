@@ -11,7 +11,9 @@ const routes = [
   { path: '/signin', name: 'SignIn', component: SignIn },
   { path: '/signup', name: 'SignUp', component: SignUp },
   { path: '/swipe', name: 'Swipe', component: SwipePage },
-  { path: '/matches', name: 'Matches', component: MatchesPage }
+  { path: '/matches', name: 'Matches', component: MatchesPage },
+  { path: '/messages', name: 'Messages', component: () => import('../pages/InboxPage.vue') },
+  { path: '/messages/:userId', name: 'Conversation', component: () => import('../pages/ConversationPage.vue') },
 ]
 
 const router = createRouter({
@@ -24,8 +26,11 @@ const { isLoggedIn } = useAuth()
 router.beforeEach((to, from, next) => {
   const authenticated = isLoggedIn()
 
-  // protect swipe and matches
-  if ((to.name === 'Swipe' || to.name === 'Matches') && !authenticated) {
+  // protect swipe, matches, and messages routes
+  if (
+    ['Swipe', 'Matches', 'Messages', 'Conversation'].includes(to.name) &&
+    !authenticated
+  ) {
     return next({ name: 'SignIn' })
   }
 
