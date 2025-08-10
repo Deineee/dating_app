@@ -58,38 +58,87 @@ const DISLIKE_USER_MUTATION = gql`
 
 const { isAuthenticated } = useAuth()
 const enabled = ref(false)
-const { result, loading } = useQuery(MATCHING_PROFILES_QUERY, null, { enabled })
+
+const { result, loading, refetch } = useQuery(
+  MATCHING_PROFILES_QUERY,
+  null,
+  { enabled, fetchPolicy: 'network-only' }
+)
+
 const { mutate: likeUser } = useMutation(LIKE_USER_MUTATION)
 const { mutate: dislikeUser } = useMutation(DISLIKE_USER_MUTATION)
 
 const profiles = ref([])
 const currentIndex = ref(0)
 
+// When query result changes, replace profiles and reset index
 watch(result, (newResult) => {
   if (newResult?.matchingProfiles) {
     profiles.value = newResult.matchingProfiles
     currentIndex.value = 0
+  } else {
+    // if result is empty, clear
+    profiles.value = []
+    currentIndex.value = 0
   }
 })
 
-watch(() => isAuthenticated.value, (loggedIn) => {
-  if (loggedIn) enabled.value = true
-}, { immediate: true })
+// Watch auth changes and ensure fresh fetch on login, clear on logout
+watch(
+  () => isAuthenticated.value,
+  async (loggedIn) => {
+    if (loggedIn) {
+      // enable query and refetch to make sure we have the latest profiles
+      enabled.value = true
+      // if refetch is available, request fresh data
+      if (typeof refetch === 'function') {
+        try {
+          await refetch()
+        } catch (err) {
+          // optional: handle error/log
+          console.warn('Refetch matchingProfiles failed', err)
+        }
+      }
+    } else {
+      // on logout: disable query and clear local profiles so old card won't show
+      enabled.value = false
+      profiles.value = []
+      currentIndex.value = 0
+    }
+  },
+  { immediate: true }
+)
 
 const currentProfile = computed(() => profiles.value[currentIndex.value] || null)
 
 async function likeProfile(userId) {
-  await likeUser({ input: { userId } })
-  nextProfile()
+  try {
+    await likeUser({ input: { userId } })
+  } catch (err) {
+    console.warn('likeUser error', err)
+  } finally {
+    nextProfile()
+  }
 }
 
 async function dislikeProfile(userId) {
-  await dislikeUser({ input: { userId } })
-  nextProfile()
+  try {
+    await dislikeUser({ input: { userId } })
+  } catch (err) {
+    console.warn('dislikeUser error', err)
+  } finally {
+    nextProfile()
+  }
 }
 
 function nextProfile() {
-  currentIndex.value++
+  currentIndex.value = currentIndex.value + 1
+  // guard to prevent index overflow (optional)
+  if (currentIndex.value >= profiles.value.length) {
+    // reset/clear so UI shows "No more profiles"
+    currentIndex.value = 0
+    profiles.value = []
+  }
 }
 
 </script>
