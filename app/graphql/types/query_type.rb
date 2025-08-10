@@ -28,14 +28,7 @@ module Types
     end
 
     def matching_profiles
-      user = context[:current_user]
-      Rails.logger.info("Current user: #{user.inspect}")
-      return [] unless user
-
-      User.where("LOWER(gender) = ?", user.gender_interest.downcase)
-          .where.not(id: user.id) # exclude current user
-          .limit(20) # limit results for performance
+      Resolvers::MatchingProfilesResolver.call(context)
     end
-
   end
 end
