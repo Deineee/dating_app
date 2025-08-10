@@ -12,12 +12,11 @@
       <li v-for="m in matches" :key="m.id" class="match-card">
         <img :src="m.primaryPhoto" alt="Primary photo" class="match-photo" />
         <div class="match-info">
-            <div class="name">{{ m.firstName }} {{ m.lastName }}</div>
+          <div class="name">{{ m.firstName }} {{ m.lastName }}</div>
         </div>
 
-        <!-- Message button -->
         <div class="actions">
-            <button @click="openConversation(m.id)" class="msg-btn">Message</button>
+          <button @click="openConversation(m.id)" class="msg-btn">Message</button>
         </div>
       </li>
     </ul>
@@ -29,6 +28,7 @@ import { useQuery } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+
 const router = useRouter()
 
 function openConversation(userId) {
@@ -46,14 +46,12 @@ const MATCHES_QUERY = gql`
   }
 `
 
-const { result, loading, error, refetch } = useQuery(MATCHES_QUERY, null, {
-  fetchPolicy: 'network-only'
+const { result, loading, error } = useQuery(MATCHES_QUERY, null, {
+  fetchPolicy: 'network-only',
 })
 
-// computed array of matches (handles undefined)
-const matches = computed(() => (result.value?.matches ?? []))
+const matches = computed(() => result.value?.matches ?? [])
 
-// optional: handle errors (console/log or show UI)
 if (error.value) {
   console.error('Matches query error', error.value)
 }
@@ -61,67 +59,124 @@ if (error.value) {
 
 <style scoped>
 .matches-page {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  max-width: 900px;
+  margin: 3rem auto;
+  padding: 0 1.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  padding-bottom: 2rem;
 }
 
 .title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
   text-align: center;
+  color: #222;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .loading,
 .empty {
   text-align: center;
-  color: #666;
+  color: #777;
+  font-size: 1.2rem;
+  margin-top: 2rem;
 }
 
 .matches-list {
   list-style: none;
   padding: 0;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
 }
 
 .match-card {
-  background: #fff;
-  border-radius: 8px;
+  background: white;
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem;
+  gap: 1.25rem;
+  padding: 1rem 1.25rem;
   justify-content: space-between;
-  padding-right: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.match-card:hover {
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
 }
 
 .match-photo {
-  width: 72px;
-  height: 72px;
+  width: 100px;
+  height: 100px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 16px;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.match-info {
+  flex-grow: 1;
+  text-align: left;
 }
 
 .match-info .name {
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.actions { display:flex; align-items:center; gap:8px; }
+.actions {
+  display: flex;
+  align-items: center;
+}
 
 .msg-btn {
-  background: #2d8cff;
+  background-color: #2d8cff;
   color: white;
   border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+  user-select: none;
 }
-.msg-btn:hover { background: #1b6fe6; }
 
+.msg-btn:hover {
+  background-color: #1b6fe6;
+}
+
+@media (max-width: 480px) {
+  .matches-list {
+    grid-template-columns: 1fr;
+  }
+  .match-card {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .match-photo {
+    width: 80px;
+    height: 80px;
+  }
+  .match-info .name {
+    font-size: 1.1rem;
+  }
+  .msg-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+}
 </style>
