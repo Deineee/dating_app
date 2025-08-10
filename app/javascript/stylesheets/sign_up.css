@@ -50,3 +50,17 @@ form.sign-up-form p.error {
   color: #333;
   font-weight: bold;
 }
+
+.photo-preview {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.photo-preview img {
+  width: 80px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+

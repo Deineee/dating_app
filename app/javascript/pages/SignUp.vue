@@ -33,24 +33,31 @@
     <input v-model="school" placeholder="School (Optional)" />
     
     <textarea v-model="bio" placeholder="Bio*" required maxlength="500"></textarea>
+      <input type="file" @change="openCropper" accept="image/*" />
+        <CropModal
+          v-if="croppingImage"
+          :imageSrc="croppingImage"
+          @confirm="confirmCrop"
+          @cancel="cancelCrop"
+          @ready="setCropper"
+        />
+      <div v-if="photos.length" class="photo-preview">
+        <img v-for="(photo, index) in photos" :key="index" :src="photo" alt="Preview" />
+      </div>
 
-    <input type="file" multiple @change="onFileChange" accept="image/*" required />
-
-    <button type="submit">Sign Up</button>
-
-    <p v-if="errors.length" style="color:red;">
-      <span v-for="err in errors" :key="err">{{ err }}</span>
-    </p>
-  </form>
+      <button type="submit">Sign Up</button>
+      <p v-if="errors.length" class="error" v-for="err in errors" :key="err">{{ err }}</p>
+    </form>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import '../stylesheets/sign_up.css'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../src/composables/useAuth'
+import { ref, onMounted, nextTick } from 'vue'
+import CropModal from '../components/CropModal.vue'
 
 const { login } = useAuth()
 const router = useRouter() 
@@ -92,22 +99,84 @@ const errors = ref([])
 
 const { mutate: signUp } = useMutation(SIGN_UP_MUTATION)
 const { mutate: signIn } = useMutation(SIGN_IN_MUTATION)
+const croppingImage = ref(null)
+const cropperInstance = ref(null)
 
-const onFileChange = (e) => {
-  const files = Array.from(e.target.files)
-  if (files.length > 5) {
-    errors.value.push('You can upload a maximum of 5 photos')
-  } else {
-    photos.value = files
-  }
+const setCropper = (cropper) => {
+  cropperInstance.value = cropper
 }
 
-const fileToBase64 = (file) => {
+const openCropper = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    croppingImage.value = event.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+const confirmCrop = () => {
+  const canvas = cropperInstance.value.getCroppedCanvas({ width: 400, height: 550 })
+  photos.value.push(canvas.toDataURL('image/jpeg', 0.9))
+  cancelCrop()
+}
+
+const cancelCrop = () => {
+  cropperInstance.value?.destroy()
+  croppingImage.value = null
+  cropperInstance.value = null
+}
+
+const onFileChange = async (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length > 5) {
+    errors.value.push('You can upload a maximum of 5 photos');
+    return;
+  }
+
+  const processedFiles = [];
+  for (const file of files) {
+    const resized = await resizeImage(file, 400, 550); // fixed Tinder-style size
+    processedFiles.push(resized);
+  }
+
+  photos.value = processedFiles;
+};
+
+function resizeImage(file, width, height) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        resolve(new File([blob], file.name, { type: file.type }));
+      }, file.type);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+const fileToBase64 = (fileOrDataUrl) => {
   return new Promise((resolve, reject) => {
+    // If it's already a base64 data URL, return as-is
+    if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
+      return resolve(fileOrDataUrl)
+    }
+
+    // Otherwise expect a Blob/File
     const reader = new FileReader()
-    reader.readAsDataURL(file)
     reader.onload = () => resolve(reader.result)
     reader.onerror = (error) => reject(error)
+    reader.readAsDataURL(fileOrDataUrl)
   })
 }
 
@@ -160,7 +229,7 @@ const onSubmit = async () => {
         password: password.value
       }
     })
-    
+
     if (signInData.signIn.errors.length) {
       errors.value = signInData.signIn.errors
       return

@@ -1,31 +1,13 @@
 <template>
-  <div class="swipe-page">
-    <div v-if="currentProfile" class="profile-card">
-      <div class="primary-photo">
-        <img :src="currentProfile.primaryPhoto" alt="Primary Photo" />
-      </div>
-      
-      <div class="photo-gallery">
-        <img 
-          v-for="(photo, index) in currentProfile.photos" 
-          :key="index" 
-          :src="photo" 
-          alt="Gallery Photo"
-          class="gallery-photo"
-        />
-      </div>
+  <div>
+    <LoadingSpinner v-if="loading || !isAuthenticated" />
 
-      <div class="profile-info">
-        <h2>{{ currentProfile.firstName }} {{ currentProfile.lastName }}</h2>
-        <p class="location">{{ currentProfile.country }}, {{ currentProfile.state }}, {{ currentProfile.city }}</p>
-        <p class="bio">{{ currentProfile.bio }}</p>
-      </div>
-
-      <div class="actions">
-        <button @click="dislikeProfile">Dislike</button>
-        <button @click="likeProfile">Like</button>
-      </div>
-    </div>
+    <SwipeCard
+      v-else-if="currentProfile"
+      :profile="currentProfile"
+      @like="likeProfile"
+      @dislike="dislikeProfile"
+    />
 
     <div v-else class="no-profiles">
       <p>No more profiles to show.</p>
@@ -37,6 +19,9 @@
 import { ref, computed, watch } from 'vue'
 import { useQuery, useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
+import { useAuth } from '../src/composables/useAuth'
+import LoadingSpinner from '../components/shared/LoadingSpinner.vue'
+import SwipeCard from '../components/SwipeCard.vue'
 
 // Declare queries and mutations first!
 const MATCHING_PROFILES_QUERY = gql`
@@ -71,8 +56,9 @@ const DISLIKE_USER_MUTATION = gql`
   }
 `
 
-// Now use them
-const { result, loading, error } = useQuery(MATCHING_PROFILES_QUERY)
+const { isAuthenticated } = useAuth()
+const enabled = ref(false)
+const { result, loading } = useQuery(MATCHING_PROFILES_QUERY, null, { enabled })
 const { mutate: likeUser } = useMutation(LIKE_USER_MUTATION)
 const { mutate: dislikeUser } = useMutation(DISLIKE_USER_MUTATION)
 
@@ -80,101 +66,35 @@ const profiles = ref([])
 const currentIndex = ref(0)
 
 watch(result, (newResult) => {
-  if (newResult && newResult.matchingProfiles) {
+  if (newResult?.matchingProfiles) {
     profiles.value = newResult.matchingProfiles
     currentIndex.value = 0
   }
 })
 
+watch(() => isAuthenticated.value, (loggedIn) => {
+  if (loggedIn) enabled.value = true
+}, { immediate: true })
+
 const currentProfile = computed(() => profiles.value[currentIndex.value] || null)
 
-async function likeProfile() {
-  if (!currentProfile.value) return
-  await likeUser({ input: { userId: currentProfile.value.id } })
+async function likeProfile(userId) {
+  await likeUser({ input: { userId } })
   nextProfile()
 }
 
-async function dislikeProfile() {
-  if (!currentProfile.value) return
-  await dislikeUser({ input: { userId: currentProfile.value.id } })
+async function dislikeProfile(userId) {
+  await dislikeUser({ input: { userId } })
   nextProfile()
 }
 
 function nextProfile() {
-  if (currentIndex.value < profiles.value.length - 1) {
-    currentIndex.value++
-  } else {
-    currentIndex.value = null
-  }
+  currentIndex.value++
 }
+
 </script>
 
-
-<style>
-.swipe-page {
-  max-width: 400px;
-  margin: 1rem auto;
-  border: 1px solid #ccc;
-  padding: 1rem;
-  font-family: Arial, sans-serif;
-}
-
-.primary-photo img {
-  width: 100%;
-  height: auto;
-  border-radius: 8px;
-}
-
-.photo-gallery {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  overflow-x: auto;
-}
-
-.gallery-photo {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.profile-info {
-  margin-top: 1rem;
-}
-
-.location {
-  font-size: 0.9rem;
-  color: #666;
-  margin-top: -0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.bio {
-  font-size: 0.95rem;
-  line-height: 1.3;
-}
-
-.actions {
-  margin-top: 1rem;
-  display: flex;
-  justify-content: space-around;
-}
-
-.actions button {
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-  border: 1px solid #888;
-  background: #f0f0f0;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.actions button:hover {
-  background: #ddd;
-}
-
+<style scoped>
 .no-profiles {
   text-align: center;
   font-size: 1.2rem;
