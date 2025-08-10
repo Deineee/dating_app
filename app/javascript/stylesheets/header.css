@@ -1,19 +1,80 @@
 .header {
-  background-color: #2d8cff;
-  padding: 1rem;
+  background: linear-gradient(90deg, #2d8cff 0%, #1b6fe6 100%);
+  padding: 0.75rem 1rem;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(29,78,216,0.08);
 }
-nav ul {
+
+.header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-left ul {
   list-style: none;
   display: flex;
   gap: 1rem;
   margin: 0;
   padding: 0;
+  align-items: center;
 }
-nav ul li a {
+
+.nav-left a {
   color: white;
   text-decoration: none;
   font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 6px;
 }
-nav ul li a.router-link-exact-active {
-  text-decoration: underline;
+
+.nav-left a.router-link-exact-active {
+  background: rgba(255,255,255,0.12);
+  text-decoration: none;
+}
+
+.logout-button {
+  background: rgba(255,255,255,0.12);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+.profile-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.18);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+}
+
+.header-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
 }

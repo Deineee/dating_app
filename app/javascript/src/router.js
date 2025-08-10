@@ -4,6 +4,7 @@ import SignIn from '../pages/SignIn.vue'
 import SignUp from '../pages/SignUp.vue'
 import SwipePage from '../pages/SwipePage.vue'
 import MatchesPage from '../pages/MatchesPage.vue'
+import ProfilePage from '../pages/ProfilePage.vue'
 import { useAuth } from './composables/useAuth'
 
 const routes = [
@@ -12,6 +13,7 @@ const routes = [
   { path: '/signup', name: 'SignUp', component: SignUp },
   { path: '/swipe', name: 'Swipe', component: SwipePage },
   { path: '/matches', name: 'Matches', component: MatchesPage },
+  { path: '/profile', name: 'Profile', component: ProfilePage },
   { path: '/messages', name: 'Messages', component: () => import('../pages/InboxPage.vue') },
   { path: '/messages/:userId', name: 'Conversation', component: () => import('../pages/ConversationPage.vue') },
 ]
@@ -28,7 +30,7 @@ router.beforeEach((to, from, next) => {
 
   // protect swipe, matches, and messages routes
   if (
-    ['Swipe', 'Matches', 'Messages', 'Conversation'].includes(to.name) &&
+    ['Swipe', 'Matches', 'Messages', 'Conversation', 'Profile'].includes(to.name) &&
     !authenticated
   ) {
     return next({ name: 'SignIn' })
