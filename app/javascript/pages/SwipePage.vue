@@ -36,6 +36,7 @@ const MATCHING_PROFILES_QUERY = gql`
       bio
       photos
       primaryPhoto
+      role  
     }
   }
 `
@@ -71,13 +72,12 @@ const { mutate: dislikeUser } = useMutation(DISLIKE_USER_MUTATION)
 const profiles = ref([])
 const currentIndex = ref(0)
 
-// When query result changes, replace profiles and reset index
 watch(result, (newResult) => {
   if (newResult?.matchingProfiles) {
     profiles.value = newResult.matchingProfiles
+      .filter(profile => profile.role !== 'admin')  // filter out admins here
     currentIndex.value = 0
   } else {
-    // if result is empty, clear
     profiles.value = []
     currentIndex.value = 0
   }
