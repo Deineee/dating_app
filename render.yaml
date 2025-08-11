@@ -1,11 +1,11 @@
-databases: 
-  - name: dating_app
+databases:
+  - name: dating_app_db
     databaseName: postgres
     user: deine
     plan: free
 
 services:
-    type: web
+  - type: web
     name: dating_app
     runtime: ruby
     plan: free
