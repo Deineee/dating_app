@@ -12,62 +12,60 @@ module Mutations
 
       attrs = input.to_h.transform_keys(&:to_s)
 
-      # Extract photos + primary index (if provided)
       photos = attrs.delete("photos")
       primary_index = attrs.delete("primary_photo_index")
+      removed_indexes = attrs.delete("removed_photo_indexes")
 
-      # If new photos provided (non-empty array), replace user's photos.
-      if photos.present?
-        # purge existing photos
-        user.photos.purge_later if user.photos.attached?
+      # Normalize removed indexes to array of unique integers sorted
+      removed_idxs = Array(removed_indexes).map(&:to_i).uniq.sort
 
-        # We want the chosen primary to be attached first.
-        ordered = photos.dup
-        if primary_index.present? && primary_index >= 0 && primary_index < photos.length
-          chosen = ordered.delete_at(primary_index)
-          ordered.unshift(chosen)
-        end
+      # Existing attachments and blobs
+      existing_attachments = user.photos.attachments.to_a
+      existing_blobs = user.photos.blobs.to_a
 
-        ordered.each_with_index do |data_url, idx|
-          # Extract mime type & base64 data
-          if data_url =~ /^data:(.*?);base64,/
-            content_type = $1
-            blob_data = data_url.split(',', 2).last
-            decoded = Base64.decode64(blob_data)
+      # Prepare blobs to keep (those not removed)
+      blobs_to_keep = existing_blobs.each_with_index.reject { |_, idx| removed_idxs.include?(idx) }.map(&:first)
 
-            filename = "profile_photo_#{Time.now.to_i}_#{idx}.jpg"
-            io = StringIO.new(decoded)
-            # Attach - ActiveStorage will detect content_type
-            user.photos.attach(io: io, filename: filename, content_type: content_type)
-          else
-            # if it's already a URL (not base64), skip — or you can handle remote fetch
-            Rails.logger.info("[UpdateUser] photos input contains non-base64 entry, skipping")
-          end
-        end
-      elsif photos && photos == [] && primary_index.present?
-        # Case: user didn't upload new photos, but wants to reorder existing ones.
-        # We'll re-order existing attachments so primary_index becomes first.
-        if user.photos.attached?
-          blobs = user.photos.blobs.to_a
-          if primary_index >= 0 && primary_index < blobs.length
-            # rotate blobs: make selected blob first
-            chosen = blobs.delete_at(primary_index)
-            new_order = [chosen] + blobs
-            # re-attach in new order: easiest approach is to download each blob and re-attach
-            # (This will create new blobs; for small amounts it is acceptable.)
-            user.photos.purge
-            new_order.each_with_index do |blob, idx|
-              # blob.download returns bytes
-              io = StringIO.new(blob.download)
-              fname = blob.filename.to_s
-              user.photos.attach(io: io, filename: fname, content_type: blob.content_type)
-            end
-          end
+      # Download blobs to memory **before** purging old attachments
+      backup = blobs_to_keep.map do |blob|
+        {
+          io: StringIO.new(blob.download),
+          filename: blob.filename.to_s,
+          content_type: blob.content_type
+        }
+      end
+
+      # Attach new photos from base64 strings (append to backup)
+      if photos.present? && photos.any? { |s| s.to_s.start_with?('data:') }
+        photos.each_with_index do |data_url, idx|
+          next unless data_url =~ /^data:(.*?);base64,/
+
+          content_type = $1
+          blob_data = data_url.split(',', 2).last
+          decoded = Base64.decode64(blob_data)
+
+          filename = "profile_photo_#{Time.now.to_i}_new_#{idx}.jpg"
+          io = StringIO.new(decoded)
+
+          backup << { io: io, filename: filename, content_type: content_type }
         end
       end
 
-      # Now apply other attributes (snake_case keys should match your model)
-      # Map GraphQL input keys to model attribute names if needed
+      # Apply primary index reorder on backup array
+      if primary_index.present? && primary_index >= 0 && primary_index < backup.length
+        chosen = backup.delete_at(primary_index)
+        backup.unshift(chosen)
+      end
+
+      # Purge all existing attachments AFTER backing up
+      existing_attachments.each(&:purge)
+
+      # Attach all photos (kept + new + reordered)
+      backup.each do |item|
+        user.photos.attach(io: item[:io], filename: item[:filename], content_type: item[:content_type])
+      end
+
+      # Now apply other user attributes
       assign_attrs = {}
       assign_attrs[:first_name] = attrs["first_name"] if attrs["first_name"]
       assign_attrs[:last_name] = attrs["last_name"] if attrs["last_name"]

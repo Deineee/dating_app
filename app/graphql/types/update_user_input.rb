@@ -1,8 +1,6 @@
 module Types
   class UpdateUserInput < Types::BaseInputObject
-    description "Attributes for updating a user"
-
-    argument :id, ID, required: true   
+    description "Attributes for updating a user"   
     argument :first_name, String, required: false
     argument :last_name, String, required: false
     argument :mobile_number, String, required: false
@@ -18,5 +16,7 @@ module Types
 
     argument :photos, [String], required: false
     argument :primary_photo_index, Integer, required: false
+
+    argument :removed_photo_indexes, [Integer], required: false
   end
 end
