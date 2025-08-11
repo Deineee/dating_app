@@ -91,10 +91,7 @@ Rails.application.configure do
   config.active_storage.service = :cloudinary
 
   # Replace 'www.myproductiondomain.com' with your real domain.
-  # Rails.application.routes.default_url_options[:host] = 'www.myproductiondomain.com'
-  
-  # config.action_mailer.default_url_options = { host: 'www.myproductiondomain.com' }
-  # Rails.application.routes.default_url_options[:protocol] = 'https'
-
-  config.action_mailer.default_url_options = { host: "https://dating-app-gq8e.onrender.com" }
+  Rails.application.routes.default_url_options[:host] = 'https://dating-app-gq8e.onrender.com'
+  config.action_mailer.default_url_options = { host: 'https://dating-app-gq8e.onrender.com' }
+  Rails.application.routes.default_url_options[:protocol] = 'https'
 end
