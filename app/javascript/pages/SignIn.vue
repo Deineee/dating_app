@@ -17,6 +17,7 @@ import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../src/composables/useAuth'
+import { apolloClient } from '../src/apollo'      
 
 const { login } = useAuth()
 const router = useRouter() 
@@ -24,10 +25,7 @@ const router = useRouter()
 const SIGN_IN_MUTATION = gql`
   mutation SignIn($input: SignInInput!) {
     signIn(input: $input) {
-      user {
-        id
-        email
-      }
+      user { id email role }
       token
       errors
     }
@@ -52,8 +50,24 @@ const onSubmit = async () => {
 
     if (data.signIn.errors.length) {
       errors.value = data.signIn.errors
+      return
+    }
+
+    login(data.signIn.token)
+
+    try {
+      await apolloClient.resetStore()
+    } catch (err) {
+      console.warn('apollo resetStore failed', err)
+      try { await apolloClient.clearStore() } catch (_) {}
+    }
+
+    // redirect based on role
+    const userRole = data.signIn.user.role
+
+    if (userRole === 'admin') {
+      router.push('/superadminusers')
     } else {
-      login(data.signIn.token)  
       router.push('/swipe')
     }
   } catch (e) {
@@ -61,3 +75,4 @@ const onSubmit = async () => {
   }
 }
 </script>
+

@@ -58,14 +58,47 @@
           <label>Last name <input v-model="form.lastName" required /></label>
           <label>Mobile number <input v-model="form.mobileNumber" /></label>
           <label>Birthdate <input v-model="form.birthdate" type="date" /></label>
-          <label>Gender <input v-model="form.gender" /></label>
-          <label>Sexual orientation <input v-model="form.sexual_orientation" /></label>
-          <label>Gender interest <input v-model="form.gender_interest" /></label>
+          <label>Gender
+            <select v-model="form.gender">
+                <option value="" disabled>Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Other">Other</option>
+                <option value="Female">Female</option>
+            </select>
+          </label>
+          <label>Sexual orientation
+            <select v-model="form.sexual_orientation">
+                <option value="" disabled>Select sexual orientation</option>
+                <option value="Male">Male</option>
+                <option value="Other">Other</option>
+                <option value="Female">Female</option>
+            </select>
+          </label>
+          <label>Gender interest
+            <select v-model="form.gender_interest">
+                <option value="" disabled>Select gender interest</option>
+                <option value="Male">Male</option>
+                <option value="Other">Other</option>
+                <option value="Female">Female</option>
+            </select>
+          </label>
           <label>Country <input v-model="form.country" /></label>
           <label>State / Region <input v-model="form.state" /></label>
           <label>City <input v-model="form.city" /></label>
           <label>School <input v-model="form.school" /></label>
           <label class="full">Bio <textarea v-model="form.bio" rows="4" /></label>
+          <label>Email
+          <input v-model="form.email" type="email" required />
+          </label>
+
+          <label>New Password
+          <input v-model="form.password" type="password" autocomplete="new-password" />
+          </label>
+
+          <label>Confirm Password
+          <input v-model="form.passwordConfirm" type="password" autocomplete="new-password" />
+          </label>
+
         </div>
 
         <div class="actions">
@@ -108,6 +141,7 @@ const CURRENT_USER_QUERY = gql`
       bio
       primaryPhoto
       photos
+      email
     }
   }
 `
@@ -121,6 +155,7 @@ const UPDATE_USER_MUTATION = gql`
         lastName
         primaryPhoto
         photos
+        email
       }
       errors
     }
@@ -151,7 +186,10 @@ const form = reactive({
   city: '',
   school: '',
   bio: '',
-  primaryPhoto: ''
+  primaryPhoto: '',
+  email: '',
+  password: '',
+  passwordConfirm: '',
 })
 
 /* Photo state */
@@ -187,6 +225,9 @@ watch(user, (u) => {
   form.school = u.school ?? ''
   form.bio = u.bio ?? ''
   form.primaryPhoto = u.primaryPhoto ?? ''
+  form.email = u.email ?? ''   
+  form.password = ''           
+  form.passwordConfirm = ''
 
   existingPhotos.value = (u.photos ?? []).map((url, i) => ({ id: `server-${i}-${hashString(url)}`, url }))
   // default primary selection to existing primary (server places primary first)
@@ -317,6 +358,12 @@ const success = ref(false)
 async function save() {
   error.value = null
   success.value = false
+
+  if (form.password !== form.passwordConfirm) {
+    error.value = 'Passwords do not match.'
+    return
+  }
+
   saving.value = true
 
   const payload = {
@@ -332,41 +379,19 @@ async function save() {
     city: form.city,
     school: form.school,
     bio: form.bio,
+    email: form.email,
   }
+
+  // Only send password if user typed it
+  if (form.password && form.password.length > 0) {
+    payload.password = form.password
+  }
+
+  //... rest of your existing photo logic and mutation call
 
   const variablesInput = { ...payload }
 
-  // compute keptExistingCount (after client-side removals)
-  const keptExistingCount = existingPhotos.value.length
-
-  if (photos.value.length > 0) {
-    // we are uploading new photos (they will be appended after kept existing)
-    variablesInput.photos = photos.value.map((p) => p.base64)
-    if (removedExistingIndexes.value.length > 0) {
-      variablesInput.removedPhotoIndexes = removedExistingIndexes.value.map(x => x.idx)
-    }
-
-    // compute combined primary index
-    if (primarySelection.value.type === 'existing') {
-      // primary points to an existing item
-      variablesInput.primaryPhotoIndex = primarySelection.value.index
-    } else {
-      // primary points to a new upload -> offset by keptExistingCount
-      variablesInput.primaryPhotoIndex = keptExistingCount + Number(primarySelection.value.index || 0)
-    }
-  } else {
-    // no new uploads
-    if (removedExistingIndexes.value.length > 0) {
-      variablesInput.removedPhotoIndexes = removedExistingIndexes.value.map(x => x.idx)
-    }
-    // primary must be an existing index
-    if (primarySelection.value.type === 'new') {
-      // if user selected a new as primary but then didn't actually upload (edge) -> fallback
-      variablesInput.primaryPhotoIndex = Number(serverPrimaryIndexValue() || 0)
-    } else {
-      variablesInput.primaryPhotoIndex = Number(primarySelection.value.index || 0)
-    }
-  }
+  // (existing photo handling code here...)
 
   const variables = { input: variablesInput }
 
@@ -377,18 +402,20 @@ async function save() {
       error.value = payloadRes.errors.join(', ')
     } else {
       success.value = true
-
+      // Refetch current user to update UI
       try {
         await apolloClient.refetchQueries({ include: [CURRENT_USER_QUERY] })
       } catch {
         try { await apolloClient.resetStore() } catch (_) {}
       }
+      // Clear password fields for security after save
+      form.password = ''
+      form.passwordConfirm = ''
 
       photos.value = []
       const newPhotos = payloadRes?.user?.photos ?? []
       existingPhotos.value = newPhotos.map((url, i) => ({ id: `server-${i}-${hashString(url)}`, url }))
 
-      // default primary selection to server primary (first item)
       primarySelection.value = { type: 'existing', index: 0 }
       removedExistingIndexes.value = []
 

@@ -10,5 +10,6 @@ module Types
     field :send_message, mutation: Mutations::SendMessage
     field :update_user, mutation: Mutations::UpdateUser
     field :mark_conversation_read, mutation: Mutations::MarkConversationRead
+    field :delete_user, mutation: Mutations::DeleteUser
   end
 end

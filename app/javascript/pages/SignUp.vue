@@ -12,18 +12,21 @@
     <select v-model="gender" required>
       <option disabled value="">Select Gender*</option>
       <option>Male</option>
+      <option>Other</option>
       <option>Female</option>
     </select>
 
     <select v-model="sexualOrientation" required>
       <option disabled value="">Sexual Orientation*</option>
       <option>Male</option>
+      <option>Other</option>
       <option>Female</option>
     </select>
 
     <select v-model="genderInterest" required>
       <option disabled value="">Gender Interest*</option>
       <option>Male</option>
+      <option>Other</option>
       <option>Female</option>
     </select>
 

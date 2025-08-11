@@ -16,7 +16,9 @@ module Types
 
     argument :photos, [String], required: false
     argument :primary_photo_index, Integer, required: false
-
     argument :removed_photo_indexes, [Integer], required: false
+    
+    argument :email, String, required: false
+    argument :password, String, required: false
   end
 end

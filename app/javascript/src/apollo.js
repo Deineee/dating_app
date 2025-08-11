@@ -4,6 +4,7 @@ import { provideApolloClient } from '@vue/apollo-composable'
 
 const httpLink = createHttpLink({
   uri: 'http://127.0.0.1:3100/graphql',
+  credentials: 'include',
 })
 
 // Add both CSRF token and JWT token to headers
@@ -18,7 +19,7 @@ const authLink = setContext((_, { headers }) => {
     headers: {
       ...headers,
       'X-CSRF-Token': csrfToken,
-      // Add Authorization header if token exists
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   }

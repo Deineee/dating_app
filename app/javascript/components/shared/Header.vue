@@ -29,6 +29,7 @@ const handleLogout = async () => {
   } finally {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('currentUser')
+    localStorage.clear()
     logout()
 
     try {
@@ -36,7 +37,7 @@ const handleLogout = async () => {
     } catch (err) {
       console.warn('Failed to clear Apollo store', err)
     }
-
+    await apolloClient.clearStore()
     router.push({ name: 'Landing' })
   }
 }
