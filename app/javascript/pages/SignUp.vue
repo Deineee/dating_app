@@ -1,71 +1,96 @@
 <template>
   <form class="sign-up-form" @submit.prevent="onSubmit">
+    <!-- Title -->
     <div class="title">Create Account</div>
+
+    <!-- Basic Info -->
     <input v-model="firstName" placeholder="First Name*" required />
     <input v-model="lastName" placeholder="Last Name*" required />
     <input v-model="mobileNumber" type="tel" placeholder="Mobile Number*" required />
     <input v-model="email" type="email" placeholder="Email*" required />
-    <input v-model="password" type="password" placeholder="Password*" required minlength="6" />
+    <input v-model="password" type="password" placeholder="Password*" minlength="6" required />
     <input v-model="passwordConfirmation" type="password" placeholder="Confirm Password*" required />
     <input v-model="birthdate" type="date" required />
-    
+
+    <!-- Selects -->
     <select v-model="gender" required>
       <option disabled value="">Select Gender*</option>
       <option>Male</option>
-      <option>Other</option>
       <option>Female</option>
+      <option>Other</option>
     </select>
 
     <select v-model="sexualOrientation" required>
       <option disabled value="">Sexual Orientation*</option>
       <option>Male</option>
-      <option>Other</option>
       <option>Female</option>
+      <option>Other</option>
     </select>
 
     <select v-model="genderInterest" required>
       <option disabled value="">Gender Interest*</option>
       <option>Male</option>
-      <option>Other</option>
       <option>Female</option>
+      <option>Other</option>
     </select>
 
+    <!-- Location -->
     <input v-model="country" placeholder="Country" />
     <input v-model="state" placeholder="State/Region" />
     <input v-model="city" placeholder="City" />
-    <input v-model="school" placeholder="School (Optional)" />
-    
-    <textarea v-model="bio" placeholder="Bio*" required maxlength="500"></textarea>
-      <input type="file" @change="openCropper" accept="image/*" />
-        <CropModal
-          v-if="croppingImage"
-          :imageSrc="croppingImage"
-          @confirm="confirmCrop"
-          @cancel="cancelCrop"
-          @ready="setCropper"
-        />
-      <div v-if="photos.length" class="photo-preview">
-        <img v-for="(photo, index) in photos" :key="index" :src="photo" alt="Preview" />
-      </div>
 
-      <button type="submit">Sign Up</button>
-      <p v-if="errors.length" class="error" v-for="err in errors" :key="err">{{ err }}</p>
-    </form>
+    <!-- Optional -->
+    <input v-model="school" placeholder="School (Optional)" />
+
+    <!-- Bio -->
+    <textarea v-model="bio" placeholder="Bio*" maxlength="500" required></textarea>
+
+    <!-- Photo Upload -->
+    <input type="file" @change="openCropper" accept="image/*" />
+
+    <!-- Cropper Modal -->
+    <CropModal
+      v-if="croppingImage"
+      :imageSrc="croppingImage"
+      @confirm="confirmCrop"
+      @cancel="cancelCrop"
+      @ready="setCropper"
+    />
+
+    <!-- Preview -->
+    <div v-if="photos.length" class="photo-preview">
+      <img
+        v-for="(photo, index) in photos"
+        :key="index"
+        :src="photo"
+        alt="Preview"
+      />
+    </div>
+
+    <!-- Submit -->
+    <button type="submit">Sign Up</button>
+
+    <!-- Errors -->
+    <p v-for="err in errors" :key="err" class="error">{{ err }}</p>
+  </form>
 </template>
 
 <script setup>
+/* ---------------- Imports ---------------- */
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
-import '../stylesheets/sign_up.css'
-import { useRouter } from 'vue-router'
 import { useAuth } from '../src/composables/useAuth'
-import { ref, onMounted, nextTick } from 'vue'
-import CropModal from '../components/CropModal.vue'
 import { apolloClient } from '../src/apollo'
+import CropModal from '../components/CropModal.vue'
+import '../stylesheets/sign_up.css'
 
+/* ---------------- Composables ---------------- */
 const { login } = useAuth()
-const router = useRouter() 
+const router = useRouter()
 
+/* ---------------- GraphQL ---------------- */
 const SIGN_UP_MUTATION = gql`
   mutation SignUp($input: SignUpInput!) {
     signUp(input: $input) {
@@ -82,7 +107,10 @@ const SIGN_IN_MUTATION = gql`
     }
   }
 `
+const { mutate: signUp } = useMutation(SIGN_UP_MUTATION)
+const { mutate: signIn } = useMutation(SIGN_IN_MUTATION)
 
+/* ---------------- State ---------------- */
 const firstName = ref('')
 const lastName = ref('')
 const mobileNumber = ref('')
@@ -101,11 +129,10 @@ const bio = ref('')
 const photos = ref([])
 const errors = ref([])
 
-const { mutate: signUp } = useMutation(SIGN_UP_MUTATION)
-const { mutate: signIn } = useMutation(SIGN_IN_MUTATION)
 const croppingImage = ref(null)
 const cropperInstance = ref(null)
 
+/* ---------------- Cropper ---------------- */
 const setCropper = (cropper) => {
   cropperInstance.value = cropper
 }
@@ -132,58 +159,20 @@ const cancelCrop = () => {
   cropperInstance.value = null
 }
 
-const onFileChange = async (e) => {
-  const files = Array.from(e.target.files);
-  if (files.length > 5) {
-    errors.value.push('You can upload a maximum of 5 photos');
-    return;
-  }
-
-  const processedFiles = [];
-  for (const file of files) {
-    const resized = await resizeImage(file, 400, 550); // fixed Tinder-style size
-    processedFiles.push(resized);
-  }
-
-  photos.value = processedFiles;
-};
-
-function resizeImage(file, width, height) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      img.src = e.target.result;
-    };
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob((blob) => {
-        resolve(new File([blob], file.name, { type: file.type }));
-      }, file.type);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-const fileToBase64 = (fileOrDataUrl) => {
+/* ---------------- Utils ---------------- */
+function fileToBase64(fileOrDataUrl) {
   return new Promise((resolve, reject) => {
-    // If it's already a base64 data URL, return as-is
     if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
       return resolve(fileOrDataUrl)
     }
-
-    // Otherwise expect a Blob/File
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result)
-    reader.onerror = (error) => reject(error)
+    reader.onerror = reject
     reader.readAsDataURL(fileOrDataUrl)
   })
 }
 
+/* ---------------- Submit ---------------- */
 const onSubmit = async () => {
   errors.value = []
 
@@ -199,7 +188,7 @@ const onSubmit = async () => {
   try {
     const base64Photos = await Promise.all(photos.value.map(fileToBase64))
 
-    // 1. Call signUp mutation first
+    // 1. Sign Up
     const { data: signUpData } = await signUp({
       input: {
         firstName: firstName.value,
@@ -226,7 +215,7 @@ const onSubmit = async () => {
       return
     }
 
-    // 2. Call signIn mutation to get token
+    // 2. Sign In
     const { data: signInData } = await signIn({
       input: {
         email: email.value,
@@ -241,19 +230,17 @@ const onSubmit = async () => {
 
     login(signInData.signIn.token)
 
-try {
-  await apolloClient.refetchQueries({
-    include: ['CurrentUser'] // must match the operationName of your query
-  })
-} catch (err) {
-  console.warn('Failed to refetch currentUser after signup/login', err)
-}
+    // 3. Refetch current user
+    try {
+      await apolloClient.refetchQueries({ include: ['CurrentUser'] })
+    } catch (err) {
+      console.warn('Failed to refetch currentUser after signup/login', err)
+    }
 
-router.push('/swipe')
+    router.push('/swipe')
   } catch (err) {
     console.error('Sign up failed:', err)
     errors.value.push('An error occurred while signing up. Please try again.')
   }
 }
-
 </script>

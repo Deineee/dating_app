@@ -1,12 +1,27 @@
 <template>
-  <form class="sign-in-form" @submit.prevent="onSubmit">
-    <input v-model="email" type="email" placeholder="Email" required />
-    <input v-model="password" type="password" placeholder="Password" required />
+  <form class="sign-in-form" @submit.prevent="onSubmit" novalidate>
+    <div class="title">Login</div>
+    <input
+      v-model="email"
+      type="email"
+      placeholder="Email"
+      required
+      autocomplete="email"
+      aria-label="Email"
+    />
+    <input
+      v-model="password"
+      type="password"
+      placeholder="Password"
+      required
+      autocomplete="current-password"
+      aria-label="Password"
+    />
     <button type="submit">Sign In</button>
 
-    <p v-if="errors.length" style="color:red;">
-      <span v-for="err in errors" :key="err">{{ err }}</span>
-    </p>
+    <ul v-if="errors.length" class="error-list" role="alert" aria-live="assertive">
+      <li v-for="err in errors" :key="err">{{ err }}</li>
+    </ul>
   </form>
 </template>
 
@@ -62,7 +77,6 @@ const onSubmit = async () => {
       try { await apolloClient.clearStore() } catch (_) {}
     }
 
-    // redirect based on role
     const userRole = data.signIn.user.role
 
     if (userRole === 'admin') {
@@ -76,3 +90,70 @@ const onSubmit = async () => {
 }
 </script>
 
+<style scoped>
+.sign-in-form {
+  max-width: 360px;
+  margin: 3rem auto;
+  padding: 2rem 2.5rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sign-in-form input {
+  padding: 12px 14px;
+  border: 1.8px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.25s ease;
+}
+
+.sign-in-form input:focus {
+  border-color: #4a90e2;
+  outline: none;
+  box-shadow: 0 0 6px rgba(74, 144, 226, 0.5);
+}
+
+.sign-in-form button {
+  background-color: #4a90e2;
+  color: white;
+  font-weight: 600;
+  padding: 12px 0;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.sign-in-form button:hover,
+.sign-in-form button:focus {
+  background-color: #357abd;
+  outline: none;
+}
+
+.error-list {
+  margin-top: 0;
+  padding-left: 1.25rem;
+  color: #d93025; /* Google red error color */
+  font-weight: 600;
+  list-style-type: disc;
+}
+
+.error-list li + li {
+  margin-top: 0.25rem;
+}
+
+.title {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: bold;
+}
+</style>
