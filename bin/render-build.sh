@@ -3,8 +3,8 @@
 set -o errexit
 
 bundle install
-bundle exec rails db:migrate
-bundle exec rails db:schema:load:queue 
+bundle exec rails solid_queue:install:migrations 
+bundle exec rails db:migrate 
 bundle exec rails db:seed
 bundle exec rails assets:precompile
 bundle exec rails assets:clean
