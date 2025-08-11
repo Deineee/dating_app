@@ -108,6 +108,7 @@ const CURRENT_USER_QUERY = gql`
       bio
       primaryPhoto
       photos
+      __typename
     }
   }
 `
@@ -119,8 +120,19 @@ const UPDATE_USER_MUTATION = gql`
         id
         firstName
         lastName
+        mobileNumber
+        birthdate
+        gender
+        sexualOrientation
+        genderInterest
+        country
+        state
+        city
+        school
+        bio
         primaryPhoto
         photos
+        __typename
       }
       errors
     }
@@ -186,7 +198,6 @@ watch(user, (u) => {
   form.primaryPhoto = u.primaryPhoto ?? ''
 
   existingPhotos.value = (u.photos ?? []).map((url, i) => ({ id: `server-${i}-${hashString(url)}`, url }))
-  // default primary selection to existing primary (server places primary first)
   primarySelection.value = existingPhotos.value.length ? { type: 'existing', index: 0 } : { type: 'new', index: 0 }
   removedExistingIndexes.value = []
 }, { immediate: true })
@@ -196,19 +207,16 @@ const initials = computed(() => {
 })
 
 const previewPrimary = computed(() => {
-  // guard against OOB indexes
   if (primarySelection.value.type === 'new') {
     const idx = primarySelection.value.index ?? 0
     return photos.value[idx]?.preview ?? null
   } else {
     const idx = primarySelection.value.index ?? 0
     if (existingPhotos.value[idx]) return existingPhotos.value[idx].url
-    // fallback to form.primaryPhoto or null
     return form.primaryPhoto ?? (photos.value[0]?.preview ?? null)
   }
 })
 
-/* Cropper handlers */
 const setCropper = (instance) => { cropperInstance.value = instance }
 
 const handleFiles = (e) => {
@@ -237,7 +245,6 @@ const confirmCrop = async () => {
   const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
   photos.value.push({ preview: dataUrl, base64: dataUrl })
 
-  // Only auto-make it primary if there were no existing photos and this is the first upload
   if (photos.value.length === 1 && existingPhotos.value.length === 0) {
     primarySelection.value = { type: 'new', index: 0 }
   }
@@ -253,7 +260,6 @@ const cancelCrop = (clearQueue = false) => {
   if (clearQueue) pendingFiles.value = []
 }
 
-/* Photo helpers */
 function removePhoto(i) {
   if (photos.value.length + existingPhotos.value.length <= 1) {
     alert('You must have at least one photo.')
@@ -302,7 +308,6 @@ function selectPrimary(type, index) {
   primarySelection.value = { type, index }
 }
 
-/* Mutation */
 const { mutate: updateUser } = useMutation(UPDATE_USER_MUTATION)
 const saving = ref(false)
 const error = ref(null)
@@ -330,7 +335,6 @@ async function save() {
 
   const variablesInput = { ...payload }
 
-  // compute keptExistingCount (after client-side removals)
   const keptExistingCount = existingPhotos.value.length
 
   if (photos.value.length > 0) {
@@ -338,7 +342,6 @@ async function save() {
     if (removedExistingIndexes.value.length > 0) {
       variablesInput.removedPhotoIndexes = removedExistingIndexes.value.map(x => x.idx)
     }
-
     if (primarySelection.value.type === 'existing') {
       variablesInput.primaryPhotoIndex = primarySelection.value.index
     } else {
@@ -349,7 +352,7 @@ async function save() {
       variablesInput.removedPhotoIndexes = removedExistingIndexes.value.map(x => x.idx)
     }
     if (primarySelection.value.type === 'new') {
-      variablesInput.primaryPhotoIndex = Number(serverPrimaryIndexValue() || 0)
+      variablesInput.primaryPhotoIndex = 0
     } else {
       variablesInput.primaryPhotoIndex = Number(primarySelection.value.index || 0)
     }
@@ -366,31 +369,60 @@ async function save() {
     } else {
       success.value = true
 
-      // 1) Optimistically update photos & primary from mutation response (instant UI feedback)
-      const newPhotos = payloadRes?.user?.photos ?? []
-      existingPhotos.value = newPhotos.map((url, i) => ({ id: `server-${i}-${hashString(url)}`, url }))
-      form.primaryPhoto = payloadRes?.user?.primaryPhoto ?? (newPhotos[0] ?? null)
+      const updatedUser = payloadRes.user || {}
 
-      // 2) Also refetch the authoritative currentUser query so watchers and other components update.
+      // Write updated user into Apollo cache for CURRENT_USER_QUERY
+      try {
+        apolloClient.cache.writeQuery({
+          query: CURRENT_USER_QUERY,
+          data: {
+            currentUser: {
+              ...updatedUser,
+              __typename: updatedUser.__typename || 'User'
+            }
+          }
+        })
+      } catch (cacheErr) {
+        console.warn('cache write failed', cacheErr)
+      }
+
+      // Update form fields immediately
+      form.firstName = updatedUser.firstName ?? form.firstName
+      form.lastName = updatedUser.lastName ?? form.lastName
+      form.mobileNumber = updatedUser.mobileNumber ?? form.mobileNumber
+      form.birthdate = updatedUser.birthdate ?? form.birthdate
+      form.gender = updatedUser.gender ?? form.gender
+      form.sexual_orientation = updatedUser.sexualOrientation ?? form.sexual_orientation
+      form.gender_interest = updatedUser.genderInterest ?? form.gender_interest
+      form.country = updatedUser.country ?? form.country
+      form.state = updatedUser.state ?? form.state
+      form.city = updatedUser.city ?? form.city
+      form.school = updatedUser.school ?? form.school
+      form.bio = updatedUser.bio ?? form.bio
+      form.primaryPhoto = updatedUser.primaryPhoto ?? form.primaryPhoto
+
+      // Append timestamp to bust image cache
+      const newPhotos = (updatedUser.photos || [])
+      existingPhotos.value = newPhotos.map((url, i) => {
+        const sep = url.includes('?') ? '&' : '?'
+        return { id: `server-${i}-${hashString(url)}`, url: `${url}${sep}v=${Date.now()}` }
+      })
+
+      photos.value = []
+      removedExistingIndexes.value = []
+
+      primarySelection.value = existingPhotos.value.length ? { type: 'existing', index: 0 } : { type: 'new', index: 0 }
+
       try {
         if (typeof refetchCurrentUser === 'function') {
           await refetchCurrentUser()
         } else {
-          // fallback: query manually
           await apolloClient.query({ query: CURRENT_USER_QUERY, fetchPolicy: 'network-only' })
         }
       } catch (e) {
-        // ignore; we already provided optimistic UI update above
+        console.warn('refetch failed', e)
       }
 
-      // clear new uploads and reset removed list
-      photos.value = []
-      removedExistingIndexes.value = []
-
-      // reset primary selection to server primary (server returns primary first — we choose index 0)
-      primarySelection.value = existingPhotos.value.length ? { type: 'existing', index: 0 } : { type: 'new', index: 0 }
-
-      // hide success message after a moment
       setTimeout(() => { success.value = false }, 1800)
     }
   } catch (e) {
@@ -400,13 +432,10 @@ async function save() {
   }
 }
 
-function serverPrimaryIndexValue() {
-  return existingPhotos.value.length ? 0 : null
+function cancel() {
+  router.back()
 }
-
-function cancel() { router.back() }
 </script>
-
 
 <style scoped>
 /* same styles as before (trimmed for brevity) */
@@ -425,11 +454,11 @@ function cancel() { router.back() }
 .thumb.primary { outline: 3px solid #2d8cff; transform: translateY(-3px); }
 form .grid { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; }
 label { display:flex; flex-direction:column; font-size:14px; color:#111; }
-label input, label textarea { margin-top:6px; padding:8px 10px; border-radius:8px; border:1px solid #e6eef6; font-size:14px; }
-label.full { grid-column: 1 / -1; }
-.actions { margin-top:18px; display:flex; gap:10px; }
-.actions button { padding:10px 14px; border-radius:8px; border:none; background:#2d8cff; color:white; font-weight:700; cursor:pointer; }
-.actions .secondary { background:#f3f4f6; color:#111; font-weight:600; }
-.error { color:#b91c1c; margin-top:12px; }
-.success { color:#059669; margin-top:12px; }
+label input, label textarea { margin-top:6px; padding:8px 12px; font-size:15px; border-radius:6px; border:1px solid #cbd5e1; }
+label.full { grid-column: span 2; }
+.actions { margin-top:20px; display:flex; gap:12px; }
+button { background:#2d8cff; border:none; border-radius:8px; color:white; font-weight:700; font-size:16px; padding:10px 18px; cursor:pointer; }
+button.secondary { background:#9ca3af; }
+.error { margin-top:14px; color:#d14343; font-weight:600; }
+.success { margin-top:14px; color:#2ea443; font-weight:600; }
 </style>

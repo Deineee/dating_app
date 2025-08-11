@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMutation, useQuery } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
@@ -62,11 +62,41 @@ const CURRENT_USER_QUERY = gql`
       lastName
       primaryPhoto
       role
+      __typename
     }
   }
 `
-const { result: currentUserResult } = useQuery(CURRENT_USER_QUERY, null, { fetchPolicy: 'network-only', pollInterval: 3000 })
+
+/*
+  Important:
+  - Use cache-and-network so the component reads the cache immediately
+    (so writes to apolloClient.cache.show up instantly), but still
+    refreshes from network in the background.
+  - Remove pollInterval (polling is noisy and introduces delays / race conditions).
+*/
+const { result: currentUserResult } = useQuery(CURRENT_USER_QUERY, null, { fetchPolicy: 'cache-and-network' })
 const currentUser = computed(() => currentUserResult.value?.currentUser ?? null)
+
+/*
+  Avatar cache-buster:
+  - When primaryPhoto changes, bump `avatarVersion` so the <img> src gets a new ?v= timestamp
+    forcing the browser to re-fetch the updated image instead of showing a stale cached image.
+*/
+const avatarVersion = ref(Date.now())
+watch(currentUser, (newUser, oldUser) => {
+  if (!newUser) return
+  // bump version only when the primaryPhoto string changes
+  if (newUser.primaryPhoto && newUser.primaryPhoto !== oldUser?.primaryPhoto) {
+    avatarVersion.value = Date.now()
+  }
+})
+
+const avatarUrl = computed(() => {
+  const p = currentUser.value?.primaryPhoto
+  if (!p) return null
+  const sep = p.includes('?') ? '&' : '?'
+  return `${p}${sep}v=${avatarVersion.value}`
+})
 
 function goToProfile() {
   router.push({ name: 'Profile' })
@@ -97,7 +127,7 @@ function goToMatchesManager() {
                   :title="currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'">
             <img
               v-if="currentUser?.primaryPhoto"
-              :src="currentUser.primaryPhoto"
+              :src="avatarUrl"
               alt="Your avatar"
               class="header-avatar"
             />
@@ -129,7 +159,7 @@ function goToMatchesManager() {
             :title="currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'">
             <img
               v-if="currentUser?.primaryPhoto"
-              :src="currentUser.primaryPhoto"
+              :src="avatarUrl"
               alt="Your avatar"
               class="header-avatar"
             />
