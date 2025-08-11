@@ -4,11 +4,6 @@
     <table>
       <thead>
         <tr>
-          <th>Photo</th>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>Role</th>
-          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -84,7 +79,7 @@ function viewUser(id) {
 function editUser(id) {
   // TODO: Implement navigation or modal for editing user
   // Example:
-  // router.push(`/admin/users/${id}/edit`)
+  // router.push(/admin/users/${id}/edit)
 }
 
 const { mutate: deleteUserMutation } = useMutation(DELETE_USER)

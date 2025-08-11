@@ -54,14 +54,6 @@ import { apolloClient } from '../src/apollo'
 
 provideApolloClient(apolloClient)
 
-// helper: encode Relay global id "User:7" -> base64
-function toGlobalId(type, id) {
-  const raw = `${type}:${String(id)}`
-  return typeof btoa !== 'undefined'
-    ? btoa(raw)
-    : Buffer.from(raw).toString('base64')
-}
-
 const props = defineProps({
   userId: [String, Number],
 })
@@ -92,25 +84,20 @@ const USER_DETAIL_QUERY = gql`
 const user = ref(null)
 const variables = ref({ id: null })
 
-const { result, loading, error, refetch, onError, stop } = useQuery(
+// Query runs automatically when variables change
+const { result, loading, error, stop } = useQuery(
   USER_DETAIL_QUERY,
   variables,
-  { enabled: false, fetchPolicy: 'network-only' }
+  { fetchPolicy: 'network-only' }
 )
 
+// Update variables when prop changes (this triggers the query)
 watch(
   () => props.userId,
-  async (id) => {
+  (id) => {
     if (id) {
-      variables.value.id = id // ✅ use raw DB id like in superadminusers.vue
+      variables.value.id = id
       console.log('[UserDetailModal] fetching user id =', id)
-
-      try {
-        const res = await refetch(variables.value)
-        console.log('[UserDetailModal] refetch resolved:', res)
-      } catch (e) {
-        console.error('[UserDetailModal] refetch error:', e)
-      }
     } else {
       user.value = null
     }
@@ -118,32 +105,43 @@ watch(
   { immediate: true }
 )
 
+// IMPORTANT: clone the payload before mutating
 watch(
-  result,
+  () => result.value,
   (r) => {
-    console.log('[UserDetailModal] raw result ref value:', r)
-    const payload = (result && result.value) || r
-    console.log('[UserDetailModal] payload:', payload)
-    const u = payload?.user ?? null
+    const payload = r ?? null
+    const raw = payload?.user ?? null
 
-    if (u) {
-      u.photos = Array.isArray(u.photos) ? u.photos : []
-      u.matches = Array.isArray(u.matches) ? u.matches : []
+    if (raw) {
+      // shallow clone + ensure arrays are real arrays (not readonly proxies)
+      const cloned = {
+        ...raw,
+        photos: Array.isArray(raw.photos) ? [...raw.photos] : [],
+        matches: Array.isArray(raw.matches) ? [...raw.matches] : []
+      }
+      user.value = cloned
+    } else {
+      user.value = null
     }
-
-    user.value = u
   },
   { immediate: true }
 )
 
-onError((e) => {
-  console.error('[UserDetailModal] GraphQL error (onError):', e)
-})
+// watch the error ref for query errors
+watch(
+  () => error.value,
+  (e) => {
+    if (e) {
+      console.error('[UserDetailModal] GraphQL error:', e)
+    }
+  }
+)
 
 onBeforeUnmount(() => {
   if (typeof stop === 'function') stop()
 })
 </script>
+
 
 <style scoped>
 .modal-overlay {
