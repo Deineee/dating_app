@@ -58,47 +58,14 @@
           <label>Last name <input v-model="form.lastName" required /></label>
           <label>Mobile number <input v-model="form.mobileNumber" /></label>
           <label>Birthdate <input v-model="form.birthdate" type="date" /></label>
-          <label>Gender
-            <select v-model="form.gender">
-                <option value="" disabled>Select gender</option>
-                <option value="Male">Male</option>
-                <option value="Other">Other</option>
-                <option value="Female">Female</option>
-            </select>
-          </label>
-          <label>Sexual orientation
-            <select v-model="form.sexual_orientation">
-                <option value="" disabled>Select sexual orientation</option>
-                <option value="Male">Male</option>
-                <option value="Other">Other</option>
-                <option value="Female">Female</option>
-            </select>
-          </label>
-          <label>Gender interest
-            <select v-model="form.gender_interest">
-                <option value="" disabled>Select gender interest</option>
-                <option value="Male">Male</option>
-                <option value="Other">Other</option>
-                <option value="Female">Female</option>
-            </select>
-          </label>
+          <label>Gender <input v-model="form.gender" /></label>
+          <label>Sexual orientation <input v-model="form.sexual_orientation" /></label>
+          <label>Gender interest <input v-model="form.gender_interest" /></label>
           <label>Country <input v-model="form.country" /></label>
           <label>State / Region <input v-model="form.state" /></label>
           <label>City <input v-model="form.city" /></label>
           <label>School <input v-model="form.school" /></label>
           <label class="full">Bio <textarea v-model="form.bio" rows="4" /></label>
-          <label>Email
-          <input v-model="form.email" type="email" required />
-          </label>
-
-          <label>New Password
-          <input v-model="form.password" type="password" autocomplete="new-password" />
-          </label>
-
-          <label>Confirm Password
-          <input v-model="form.passwordConfirm" type="password" autocomplete="new-password" />
-          </label>
-
         </div>
 
         <div class="actions">
@@ -141,7 +108,6 @@ const CURRENT_USER_QUERY = gql`
       bio
       primaryPhoto
       photos
-      email
     }
   }
 `
@@ -155,7 +121,6 @@ const UPDATE_USER_MUTATION = gql`
         lastName
         primaryPhoto
         photos
-        email
       }
       errors
     }
@@ -169,7 +134,8 @@ function hashString(s) {
   return Math.abs(h).toString(36)
 }
 
-const { result: currentUserResult } = useQuery(CURRENT_USER_QUERY, null, { fetchPolicy: 'network-only' })
+/* Capture refetch from useQuery so we can refresh the current user after mutation */
+const { result: currentUserResult, refetch: refetchCurrentUser } = useQuery(CURRENT_USER_QUERY, null, { fetchPolicy: 'network-only' })
 const user = computed(() => currentUserResult.value?.currentUser ?? null)
 
 const form = reactive({
@@ -186,15 +152,12 @@ const form = reactive({
   city: '',
   school: '',
   bio: '',
-  primaryPhoto: '',
-  email: '',
-  password: '',
-  passwordConfirm: '',
+  primaryPhoto: ''
 })
 
 /* Photo state */
 const photos = ref([]) // newly uploaded { preview, base64 }
-const existingPhotos = ref([]) // existing server photos { id, url }  (stable id used for key)
+const existingPhotos = ref([]) // existing server photos { id, url }
 const croppingImage = ref(null)
 const cropperInstance = ref(null)
 const pendingFiles = ref([])
@@ -202,13 +165,9 @@ const pendingFiles = ref([])
 /* Track removals (store original index + stable id) */
 const removedExistingIndexes = ref([])
 
-/* Unified primary selection:
-   { type: 'existing' | 'new', index: number }
-   This lets user pick any thumbnail (existing or new) as primary.
-*/
 const primarySelection = ref({ type: 'existing', index: 0 })
 
-/* populate form and existing photos */
+/* populate form and existing photos — watch will run after refetchCurrentUser() */
 watch(user, (u) => {
   if (!u) return
   form.id = u.id
@@ -225,13 +184,10 @@ watch(user, (u) => {
   form.school = u.school ?? ''
   form.bio = u.bio ?? ''
   form.primaryPhoto = u.primaryPhoto ?? ''
-  form.email = u.email ?? ''   
-  form.password = ''           
-  form.passwordConfirm = ''
 
   existingPhotos.value = (u.photos ?? []).map((url, i) => ({ id: `server-${i}-${hashString(url)}`, url }))
   // default primary selection to existing primary (server places primary first)
-  primarySelection.value = { type: 'existing', index: 0 }
+  primarySelection.value = existingPhotos.value.length ? { type: 'existing', index: 0 } : { type: 'new', index: 0 }
   removedExistingIndexes.value = []
 }, { immediate: true })
 
@@ -240,10 +196,15 @@ const initials = computed(() => {
 })
 
 const previewPrimary = computed(() => {
+  // guard against OOB indexes
   if (primarySelection.value.type === 'new') {
-    return photos.value[primarySelection.value.index]?.preview ?? null
+    const idx = primarySelection.value.index ?? 0
+    return photos.value[idx]?.preview ?? null
   } else {
-    return existingPhotos.value[primarySelection.value.index]?.url ?? form.primaryPhoto ?? null
+    const idx = primarySelection.value.index ?? 0
+    if (existingPhotos.value[idx]) return existingPhotos.value[idx].url
+    // fallback to form.primaryPhoto or null
+    return form.primaryPhoto ?? (photos.value[0]?.preview ?? null)
   }
 })
 
@@ -299,16 +260,13 @@ function removePhoto(i) {
     return
   }
 
-  // if the removed one was the selected primary, pick a sensible fallback:
   if (primarySelection.value.type === 'new' && primarySelection.value.index === i) {
-    // prefer first existing if present, otherwise next new
     if (existingPhotos.value.length) {
       primarySelection.value = { type: 'existing', index: 0 }
     } else {
       primarySelection.value = { type: 'new', index: Math.max(0, i - 1) }
     }
   } else if (primarySelection.value.type === 'new' && primarySelection.value.index > i) {
-    // shift selection down if index before it was removed
     primarySelection.value.index = primarySelection.value.index - 1
   }
 
@@ -324,20 +282,16 @@ function removeExistingPhoto(idx) {
   const item = existingPhotos.value[idx]
   if (!item) return
 
-  // Save id + index for server to delete
   removedExistingIndexes.value.push({ id: item.id, idx })
 
-  // If this item was currently selected as primary, pick fallback
   if (primarySelection.value.type === 'existing' && primarySelection.value.index === idx) {
     if (photos.value.length) {
       primarySelection.value = { type: 'new', index: 0 }
     } else {
-      // choose next existing (or previous) after removal
       const next = Math.min(idx, existingPhotos.value.length - 1)
       primarySelection.value = { type: 'existing', index: Math.max(0, next - 1) }
     }
   } else if (primarySelection.value.type === 'existing' && primarySelection.value.index > idx) {
-    // primary index shifts left by one
     primarySelection.value.index = primarySelection.value.index - 1
   }
 
@@ -345,7 +299,6 @@ function removeExistingPhoto(idx) {
 }
 
 function selectPrimary(type, index) {
-  // type: 'existing' or 'new'
   primarySelection.value = { type, index }
 }
 
@@ -358,12 +311,6 @@ const success = ref(false)
 async function save() {
   error.value = null
   success.value = false
-
-  if (form.password !== form.passwordConfirm) {
-    error.value = 'Passwords do not match.'
-    return
-  }
-
   saving.value = true
 
   const payload = {
@@ -379,47 +326,72 @@ async function save() {
     city: form.city,
     school: form.school,
     bio: form.bio,
-    email: form.email,
   }
-
-  // Only send password if user typed it
-  if (form.password && form.password.length > 0) {
-    payload.password = form.password
-  }
-
-  //... rest of your existing photo logic and mutation call
 
   const variablesInput = { ...payload }
 
-  // (existing photo handling code here...)
+  // compute keptExistingCount (after client-side removals)
+  const keptExistingCount = existingPhotos.value.length
+
+  if (photos.value.length > 0) {
+    variablesInput.photos = photos.value.map((p) => p.base64)
+    if (removedExistingIndexes.value.length > 0) {
+      variablesInput.removedPhotoIndexes = removedExistingIndexes.value.map(x => x.idx)
+    }
+
+    if (primarySelection.value.type === 'existing') {
+      variablesInput.primaryPhotoIndex = primarySelection.value.index
+    } else {
+      variablesInput.primaryPhotoIndex = keptExistingCount + Number(primarySelection.value.index || 0)
+    }
+  } else {
+    if (removedExistingIndexes.value.length > 0) {
+      variablesInput.removedPhotoIndexes = removedExistingIndexes.value.map(x => x.idx)
+    }
+    if (primarySelection.value.type === 'new') {
+      variablesInput.primaryPhotoIndex = Number(serverPrimaryIndexValue() || 0)
+    } else {
+      variablesInput.primaryPhotoIndex = Number(primarySelection.value.index || 0)
+    }
+  }
 
   const variables = { input: variablesInput }
 
   try {
     const res = await updateUser(variables)
     const payloadRes = res?.data?.updateUser
+
     if (payloadRes?.errors && payloadRes.errors.length) {
       error.value = payloadRes.errors.join(', ')
     } else {
       success.value = true
-      // Refetch current user to update UI
-      try {
-        await apolloClient.refetchQueries({ include: [CURRENT_USER_QUERY] })
-      } catch {
-        try { await apolloClient.resetStore() } catch (_) {}
-      }
-      // Clear password fields for security after save
-      form.password = ''
-      form.passwordConfirm = ''
 
-      photos.value = []
+      // 1) Optimistically update photos & primary from mutation response (instant UI feedback)
       const newPhotos = payloadRes?.user?.photos ?? []
       existingPhotos.value = newPhotos.map((url, i) => ({ id: `server-${i}-${hashString(url)}`, url }))
+      form.primaryPhoto = payloadRes?.user?.primaryPhoto ?? (newPhotos[0] ?? null)
 
-      primarySelection.value = { type: 'existing', index: 0 }
+      // 2) Also refetch the authoritative currentUser query so watchers and other components update.
+      try {
+        if (typeof refetchCurrentUser === 'function') {
+          await refetchCurrentUser()
+        } else {
+          // fallback: query manually
+          await apolloClient.query({ query: CURRENT_USER_QUERY, fetchPolicy: 'network-only' })
+        }
+      } catch (e) {
+        // ignore; we already provided optimistic UI update above
+      }
+
+      // clear new uploads and reset removed list
+      photos.value = []
       removedExistingIndexes.value = []
 
-      setTimeout(() => { success.value = false }, 1400)
+      // reset primary selection to server primary (server returns primary first — we choose index 0)
+      primarySelection.value = existingPhotos.value.length ? { type: 'existing', index: 0 } : { type: 'new', index: 0 }
+
+      // hide success message after a moment
+      setTimeout(() => { success.value = false }, 1800)
     }
   } catch (e) {
     error.value = e.message || 'Failed to update profile'
@@ -429,12 +401,12 @@ async function save() {
 }
 
 function serverPrimaryIndexValue() {
-  // during save fallback: server's primary is assumed to be index 0 if present
   return existingPhotos.value.length ? 0 : null
 }
 
 function cancel() { router.back() }
 </script>
+
 
 <style scoped>
 /* same styles as before (trimmed for brevity) */
