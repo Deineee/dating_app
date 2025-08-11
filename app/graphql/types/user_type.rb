@@ -27,7 +27,6 @@ module Types
     field :photos, [String], null: false, description: "Array of photo URLs"
     field :role, String, null: true, description: "User role such as user, admin"
     field :matches, [Types::UserType], null: false, description: "Users matched with this user"
-
     def role
       object.role
     end

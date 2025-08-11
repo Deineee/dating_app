@@ -1,56 +1,52 @@
 module Mutations
   class UpdateUser < GraphQL::Schema::Mutation
     null false
+
+    argument :id, ID, required: false
     argument :input, Types::UpdateUserInput, required: true
 
     field :user, Types::UserType, null: true
     field :errors, [String], null: false
 
-    def resolve(input:)
-      user = context[:current_user]
-      return { user: nil, errors: ['Not authenticated'] } unless user
+    def resolve(id: nil, input:)
+      current_user = context[:current_user]
+      return { user: nil, errors: ['Not authenticated'] } unless current_user
+
+      # Admin may update any user by passing id
+      target =
+        if id.present?
+          return { user: nil, errors: ['Not authorized'] } unless current_user.role == 'admin'
+          User.find_by(id: id)
+        else
+          current_user
+        end
+
+      return { user: nil, errors: ['User not found'] } unless target
 
       attrs = input.to_h.transform_keys(&:to_s)
 
-      # Your existing photo handling code here...
-
-      # Extract photos and photo-related data as you have already
+      # Extract photos and photo-related data (your existing photo logic goes here if needed)
       photos = attrs.delete("photos")
       primary_index = attrs.delete("primary_photo_index")
       removed_indexes = attrs.delete("removed_photo_indexes")
 
-      # Existing photo processing code here (backup, purge, attach)...
-
-      # Now handle user attributes (including email & password)
+      # example: assign permitted attrs (list out fields you want to allow)
       assign_attrs = {}
-      assign_attrs[:first_name] = attrs["first_name"] if attrs["first_name"]
-      assign_attrs[:last_name] = attrs["last_name"] if attrs["last_name"]
-      assign_attrs[:mobile_number] = attrs["mobile_number"] if attrs["mobile_number"]
-      assign_attrs[:birthdate] = attrs["birthdate"] if attrs["birthdate"]
-      assign_attrs[:gender] = attrs["gender"] if attrs["gender"]
-      assign_attrs[:sexual_orientation] = attrs["sexual_orientation"] if attrs["sexual_orientation"]
-      assign_attrs[:gender_interest] = attrs["gender_interest"] if attrs["gender_interest"]
-      assign_attrs[:country] = attrs["country"] if attrs["country"]
-      assign_attrs[:state] = attrs["state"] if attrs["state"]
-      assign_attrs[:city] = attrs["city"] if attrs["city"]
-      assign_attrs[:school] = attrs["school"] if attrs["school"]
-      assign_attrs[:bio] = attrs["bio"] if attrs["bio"]
-      assign_attrs[:email] = attrs["email"] if attrs["email"].present?
-
-      # Assign non-password attributes first
-      user.assign_attributes(assign_attrs)
-
-      # Validate password presence and length if provided
-      if attrs["password"].present?
-        user.password = attrs["password"]
+      %w[first_name last_name mobile_number birthdate gender sexual_orientation gender_interest country state city school bio email].each do |k|
+        assign_attrs[k] = attrs[k] if attrs.key?(k)
       end
 
-      # Perform validation and save
-      if user.valid? && user.save
-        { user: user, errors: [] }
+      target.assign_attributes(assign_attrs)
+
+      if attrs["password"].present?
+        target.password = attrs["password"]
+      end
+
+      if target.valid? && target.save
+        # handle photos if you have logic: attach/purge/assign primary etc...
+        { user: target, errors: [] }
       else
-        # Collect validation errors including password/email errors
-        { user: nil, errors: user.errors.full_messages }
+        { user: nil, errors: target.errors.full_messages }
       end
     rescue => e
       Rails.logger.error("[GraphQL::UpdateUser] #{e.class} #{e.message}\n#{e.backtrace.first(10).join("\n")}")

@@ -3,40 +3,48 @@
     <div class="modal-content">
       <button class="close" @click="$emit('close')">×</button>
 
-      <div v-if="loading">Loading...</div>
-      <div v-else-if="error">{{ error.message }}</div>
+      <div v-if="loading" class="loading">Loading...</div>
+      <div v-else-if="error" class="error">{{ error.message }}</div>
 
       <div v-else-if="user">
-        <img
-          :src="user.primaryPhoto || placeholderImage"
-          alt="Primary"
-          width="150"
-          style="border-radius: 8px; object-fit: cover;"
-        />
-
-        <div class="gallery" v-if="user.photos && user.photos.length">
+        <!-- Primary Photo -->
+        <div class="primary-photo">
           <img
-            v-for="photo in user.photos"
-            :key="photo"
-            :src="photo"
-            alt="User photo"
-            width="70"
-            style="border-radius: 4px; object-fit: cover;"
+            :src="user.primaryPhoto || placeholderImage"
+            alt="Primary"
           />
         </div>
 
-        <h2>{{ user.firstName }} {{ user.lastName }}</h2>
+        <!-- Gallery excluding primary photo -->
+        <div
+          class="gallery"
+          v-if="user.photos && user.photos.length > 1"
+        >
+          <img
+            v-for="photo in user.photos.filter(p => p !== user.primaryPhoto)"
+            :key="photo"
+            :src="photo"
+            alt="User photo"
+          />
+        </div>
 
-        <p><strong>Location:</strong> {{ user.country }}, {{ user.state }}, {{ user.city }}</p>
-        <p><strong>Bio:</strong> {{ user.bio }}</p>
+        <div class="user-info">
+          <h2>{{ user.firstName }} {{ user.lastName }}</h2>
+          <p class="location">
+            📍 {{ user.country }}, {{ user.state }}, {{ user.city }}
+          </p>
+          <p class="bio">{{ user.bio }}</p>
+        </div>
 
-        <h3>Matches</h3>
-        <ul>
-          <li v-for="match in user.matches" :key="match.id">
-            {{ match.firstName }} {{ match.lastName }}
-          </li>
-          <li v-if="!user.matches.length">No matches found.</li>
-        </ul>
+        <div class="matches">
+          <h3>Matches</h3>
+          <ul>
+            <li v-for="match in user.matches" :key="match.id">
+              {{ match.firstName }} {{ match.lastName }}
+            </li>
+            <li v-if="!user.matches.length" class="empty">No matches found.</li>
+          </ul>
+        </div>
       </div>
 
       <div v-else>
@@ -154,26 +162,99 @@ onBeforeUnmount(() => {
 
 .modal-content {
   background: white;
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 600px;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 640px;
   width: 100%;
   position: relative;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  overflow-y: auto;
+  max-height: 90vh;
 }
 
 .close {
   position: absolute;
-  top: 10px; right: 10px;
-  font-size: 24px;
+  top: 12px; right: 12px;
+  font-size: 26px;
   cursor: pointer;
   background: transparent;
   border: none;
+  color: #555;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 20px;
+}
+
+.primary-photo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.primary-photo img {
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
 .gallery {
-  margin: 12px 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   gap: 8px;
+  margin-bottom: 16px;
+}
+
+.gallery img {
+  width: 100%;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.user-info {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.user-info h2 {
+  margin-bottom: 4px;
+  font-size: 1.4rem;
+}
+
+.location {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.bio {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.matches h3 {
+  margin-bottom: 8px;
+}
+
+.matches ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.matches li {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.matches li.empty {
+  color: #888;
+  font-style: italic;
+  border: none;
 }
 </style>
