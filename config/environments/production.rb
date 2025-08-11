@@ -95,4 +95,6 @@ Rails.application.configure do
   
   # config.action_mailer.default_url_options = { host: 'www.myproductiondomain.com' }
   # Rails.application.routes.default_url_options[:protocol] = 'https'
+
+  config.action_mailer.default_url_options = { host: "https://dating-app-gq8e.onrender.com" }
 end
