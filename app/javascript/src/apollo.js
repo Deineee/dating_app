@@ -3,7 +3,7 @@ import { setContext } from '@apollo/client/link/context'
 import { provideApolloClient } from '@vue/apollo-composable'
 
 const httpLink = createHttpLink({
-  uri: 'http://127.0.0.1:3100/graphql',
+  uri: import.meta.env.VITE_GRAPHQL_HTTP || 'http://127.0.0.1:3100/graphql',
   credentials: 'include',
 })
 
