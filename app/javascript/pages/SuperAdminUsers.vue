@@ -1,9 +1,20 @@
 <template>
   <div class="super-admin-users">
-    <h1>User Manager</h1>
+    <header class="mm-header">
+      <h1>User Manager</h1>
 
-    <div class="table-wrap">
-      <table class="user-table">
+      <div class="controls">
+        <input
+          v-model="q"
+          placeholder="Search by name..."
+          class="search"
+          @input="applyFilter"
+        />
+      </div>
+    </header>
+
+    <div class="card">
+      <table class="mm-table">
         <thead>
           <tr>
             <th>Photo</th>
@@ -14,24 +25,28 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in users" :key="user.id">
+          <tr v-for="user in displayedUsers" :key="user.id">
             <td>
-              <img :src="user.primaryPhoto" class="user-photo" />
+              <img :src="user.primaryPhoto || placeholder" class="avatar" />
             </td>
             <td>{{ user.firstName }}</td>
             <td>{{ user.lastName }}</td>
             <td>{{ user.role }}</td>
             <td class="action-buttons">
-              <button class="btn view" @click="viewUser(user.id)">View</button>
-              <button class="btn edit" @click="openEdit(user.id)">Edit</button>
+              <button class="btn sm view" @click="viewUser(user.id)">View</button>
+              <button class="btn sm edit" @click="openEdit(user.id)">Edit</button>
               <button
-                class="btn delete"
+                class="btn sm delete"
                 @click="deleteUser(user.id)"
                 :disabled="deletingId === user.id"
               >
                 {{ deletingId === user.id ? 'Deleting...' : 'Delete' }}
               </button>
             </td>
+          </tr>
+
+          <tr v-if="!displayedUsers.length">
+            <td colspan="5" class="empty">No users found.</td>
           </tr>
         </tbody>
       </table>
@@ -57,67 +72,25 @@ import { ref, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useQuery, useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
-import { useAuth } from '../src/composables/useAuth'
-import '../stylesheets/header.css'
-import { apolloClient } from '../src/apollo'
 import UserDetailModal from '../components/UserDetailModal.vue'
 import EditUserModal from '../components/EditUserModal.vue'
 
-const router = useRouter()
-const route = useRoute()
-const { isAuthenticated: authRef, logout } = useAuth()
-const isAuthenticated = computed(() => authRef.value)
-const authRoutes = ['Swipe', 'Matches', 'Messages', 'Conversation', 'Profile']
+const placeholder = 'https://via.placeholder.com/72?text=No+Photo'
 
-const isSuperAdminUsersPage = computed(() => route.name === 'SuperAdminUsers')
-
-const SIGN_OUT_MUTATION = gql`
-  mutation SignOut($input: SignOutInput!) {
-    signOut(input: $input)
-  }
-`
-
-const { mutate: signOut } = useMutation(SIGN_OUT_MUTATION)
-
-const handleLogout = async () => {
-  try {
-    await signOut({ input: {} })
-  } catch (error) {
-    console.error('Logout failed:', error)
-  } finally {
-    localStorage.clear()
-    logout()
-    try {
-      await apolloClient.clearStore()
-    } catch (err) {
-      console.warn('Failed to clear Apollo store', err)
-    }
-    router.push({ name: 'Landing' })
-  }
-}
-
-const showHomeLink = computed(() => {
-  return isAuthenticated.value && authRoutes.includes(route.name)
+const users = ref([])
+const q = ref('')
+const displayedUsers = computed(() => {
+  if (!q.value.trim()) return users.value
+  const term = q.value.toLowerCase()
+  return users.value.filter(u => {
+    const fullName = `${u.firstName ?? ''} ${u.lastName ?? ''}`.toLowerCase()
+    return fullName.includes(term)
+  })
 })
 
-const CURRENT_USER_QUERY = gql`
-  query CurrentUser {
-    currentUser {
-      id
-      firstName
-      lastName
-      primaryPhoto
-    }
-  }
-`
-const { result: currentUserResult } = useQuery(CURRENT_USER_QUERY, null, { fetchPolicy: 'network-only' })
-const currentUser = computed(() => currentUserResult.value?.currentUser ?? null)
-
-function goToProfile() {
-  router.push({ name: 'Profile' })
-}
-
-// === Super Admin User Management ===
+const selectedUser = ref(null)
+const editingUser = ref(null)
+const deletingId = ref(null)
 
 const GET_ALL_USERS = gql`
   query {
@@ -131,22 +104,19 @@ const GET_ALL_USERS = gql`
   }
 `
 
-const users = ref([])
-const selectedUser = ref(null)
-const editingUser = ref(null)
-const deletingId = ref(null)
-
 const { result, refetch } = useQuery(GET_ALL_USERS)
 
 watch(
   result,
   () => {
-    // Only show users that are NOT admin or superadmin
-    users.value = (result.value?.allUsers ?? []).filter(
-      (u) => u.role !== 'admin')
+    users.value = (result.value?.allUsers ?? []).filter(u => u.role !== 'admin')
   },
   { immediate: true }
 )
+
+function applyFilter() {
+  // displayedUsers is reactive, so no code needed here
+}
 
 function viewUser(id) {
   selectedUser.value = id
@@ -176,15 +146,12 @@ async function deleteUser(id) {
   if (confirm('Are you sure you want to delete this user?')) {
     deletingId.value = id
     try {
-      const res = await deleteUserMutation({ input: { id } }) // Pass input object
+      const res = await deleteUserMutation({ input: { id } })
       if (res.data.deleteUser.success) {
         alert('✅ User deleted successfully')
         await refetch()
       } else {
-        alert(
-          '❌ Failed to delete user: ' +
-            (res.data.deleteUser.errors.join(', ') || 'Unknown error')
-        )
+        alert('❌ Failed to delete user: ' + (res.data.deleteUser.errors.join(', ') || 'Unknown error'))
       }
     } catch (err) {
       console.error(err)
@@ -198,79 +165,97 @@ async function deleteUser(id) {
 
 <style scoped>
 .super-admin-users {
-  padding: 20px;
-  background: #f9f9f9;
-  min-height: 100vh;
+  padding: 18px;
+  max-width: 980px;
+  margin: 0 auto;
 }
-
-h1 {
-  font-size: 1.8rem;
-  margin-bottom: 20px;
-  color: #333;
+.mm-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-
-.user-table {
+.mm-header h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+.controls {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.search {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  width: 220px;
+}
+.card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(8,12,24,0.06);
+  overflow: hidden;
+}
+.mm-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
 }
-
-.user-table th,
-.user-table td {
-  padding: 12px 15px;
-  text-align: left;
-}
-
-.user-table thead {
-  background-color: #4a90e2;
+.mm-table thead {
+  background: #0f172a;
   color: white;
 }
-
-.user-table tbody tr:nth-child(even) {
-  background-color: #f4f6f8;
+.mm-table th,
+.mm-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
 }
-
-.user-photo {
-  width: 50px;
-  height: 50px;
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   object-fit: cover;
-  border-radius: 50%;
-  border: 2px solid #ddd;
+  border: 1px solid #eee;
 }
-
 .action-buttons {
   display: flex;
   gap: 8px;
 }
-
-.btn {
-  padding: 6px 12px;
-  font-size: 0.85rem;
+.btn.sm {
+  padding: 6px 10px;
+  background: #4a90e2;
+  color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: 0.2s ease;
+  font-size: 0.85rem;
 }
-
-.btn.view {
+.btn.sm.view {
   background-color: #4a90e2;
-  color: white;
 }
-
-.btn.edit {
+.btn.sm.edit {
   background-color: #f5a623;
-  color: white;
 }
-
-.btn.delete {
+.btn.sm.delete {
   background-color: #d0021b;
-  color: white;
 }
-
-.btn:hover {
+.btn.sm:hover {
   opacity: 0.85;
+}
+.empty {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
+}
+@media (max-width: 720px) {
+  .mm-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .search {
+    width: 100%;
+  }
 }
 </style>

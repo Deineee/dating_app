@@ -61,6 +61,7 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '../src/composables/useAuth'
 import { ref, onMounted, nextTick } from 'vue'
 import CropModal from '../components/CropModal.vue'
+import { apolloClient } from '../src/apollo'
 
 const { login } = useAuth()
 const router = useRouter() 
@@ -238,11 +239,21 @@ const onSubmit = async () => {
       return
     }
 
-    // 3. Login and redirect
     login(signInData.signIn.token)
-    router.push('/swipe')
-  } catch (e) {
-    errors.value = [e.message]
+
+try {
+  await apolloClient.refetchQueries({
+    include: ['CurrentUser'] // must match the operationName of your query
+  })
+} catch (err) {
+  console.warn('Failed to refetch currentUser after signup/login', err)
+}
+
+router.push('/swipe')
+  } catch (err) {
+    console.error('Sign up failed:', err)
+    errors.value.push('An error occurred while signing up. Please try again.')
   }
 }
+
 </script>
